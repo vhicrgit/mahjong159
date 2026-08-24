@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安康159麻将</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 顶部栏 -->
+  <header id="topbar">
+    <div class="title">安康159麻将</div>
+    <div class="top-info">
+      <span id="wall-info">牌堆: -</span>
+      <span id="dealer-info">庄家: -</span>
+      <button id="btn-review" class="btn">复盘</button>
+      <button id="btn-analysis" class="btn">分析</button>
+      <button id="btn-new" class="btn btn-primary">新开局</button>
+    </div>
+  </header>
+
+  <!-- 牌桌 -->
+  <div id="table">
+    <!-- 对家 -->
+    <div class="opp opp-top" id="opp-2">
+      <div class="opp-name">对家</div>
+      <div class="opp-hand"></div>
+      <div class="opp-melds"></div>
+    </div>
+    <!-- 上家(左) -->
+    <div class="opp opp-left" id="opp-3">
+      <div class="opp-name">上家</div>
+      <div class="opp-hand"></div>
+      <div class="opp-melds"></div>
+    </div>
+    <!-- 下家(右) -->
+    <div class="opp opp-right" id="opp-1">
+      <div class="opp-name">下家</div>
+      <div class="opp-hand"></div>
+      <div class="opp-melds"></div>
+    </div>
+
+    <!-- 中央弃牌区 -->
+    <div id="center">
+      <div class="discard-area" id="discard-2"><div class="discard-label">对家</div><div class="discards"></div></div>
+      <div class="discard-area" id="discard-3"><div class="discard-label">上家</div><div class="discards"></div></div>
+      <div class="discard-area" id="discard-1"><div class="discard-label">下家</div><div class="discards"></div></div>
+      <div class="discard-area" id="discard-0"><div class="discard-label">我</div><div class="discards"></div></div>
+    </div>
+
+    <!-- 结果弹层 -->
+    <div id="result-overlay" class="hidden">
+      <div id="result-box">
+        <div id="result-title"></div>
+        <div id="result-detail"></div>
+        <div id="result-scores"></div>
+        <button class="btn btn-primary" onclick="newGame()">再来一局</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 操作按钮区 -->
+  <div id="actions">
+    <button id="btn-peng" class="btn btn-action hidden" onclick="doPeng()">碰</button>
+    <button id="btn-gang" class="btn btn-action hidden" onclick="doGang()">杠</button>
+    <button id="btn-pass" class="btn btn-action hidden" onclick="doPass()">过</button>
+    <div id="gang-choices" class="hidden"></div>
+  </div>
+
+  <!-- 我的手牌区 -->
+  <div id="my-area">
+    <div id="my-melds"></div>
+    <div id="my-hand"></div>
+    <div id="my-status"></div>
+  </div>
+
+  <!-- 复盘面板(mjai式赛后检讨) -->
+  <aside id="review-panel" class="hidden">
+    <div class="panel-header">
+      <span>赛后检讨</span>
+      <span class="panel-close" onclick="toggleReview()">x</span>
+    </div>
+    <div id="review-summary"></div>
+    <div id="review-content"></div>
+  </aside>
+
+  <!-- 分析面板 -->
+  <aside id="analysis-panel" class="hidden">
+    <div class="panel-header">
+      <span>牌局分析</span>
+      <span class="panel-close" onclick="toggleAnalysis()">x</span>
+    </div>
+    <div id="analysis-content"></div>
+  </aside>
+</div>
+<script src="/static/js/game.js"></script>
+</body>
+</html>
