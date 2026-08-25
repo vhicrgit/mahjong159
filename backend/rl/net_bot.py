@@ -1,12 +1,13 @@
-"""安康159 - 神经网络Bot
+"""安康159 - 神经网络Bot (Q值版)
 
-用训练好的模型做出牌决策(碰/杠沿用规则)。
-可选温度采样: temperature=0 时取 argmax(最强), >0 时按概率采样(多样性)。
+用训练好的 Q 网络做出牌决策(碰/杠沿用规则)。
+推理: argmax Q(s,a) over legal actions
+训练探索: Boltzmann(Q/T) 采样
 """
 
 import torch
 
-from ..rl.features import encode_state
+from ..rl.features_v2 import encode_state
 from ..rl.model import build_model, legal_discard_mask
 from ..ai.bot import Bot
 
@@ -26,10 +27,11 @@ class NetBot(Bot):
         mask = legal_discard_mask(
             self.game.players[self.seat].hand_counts).unsqueeze(0)
         with torch.no_grad():
-            probs = self.model.policy(x, mask)[0]
+            q = self.model.q(x, mask)[0]
         if self.temperature <= 0:
-            return int(probs.argmax().item())
-        probs = probs.clamp(min=1e-9)
-        dist = torch.distributions.Categorical(
-            probs ** (1.0 / self.temperature))
-        return int(dist.sample().item())
+            return int(q.argmax().item())
+        # Boltzmann exploration
+        logits = q / self.temperature
+        logits = logits - logits.max()  # numerical stability
+        probs = torch.softmax(logits, dim=-1)
+        return int(torch.multinomial(probs, 1).item())

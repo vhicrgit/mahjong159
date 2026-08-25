@@ -46,48 +46,63 @@ def main():
                     help="初始模型路径(空则先BC热身)")
     ap.add_argument("--out", type=str, default="model_iter.pt")
     ap.add_argument("--eval-games", type=int, default=100)
+    ap.add_argument("--workers", type=int, default=0)
+    ap.add_argument("--temperature", type=float, default=1.0,
+                    help="自对弈探索温度(默认1.0, 降噪推荐0.3~0.5)")
     args = ap.parse_args()
 
     device = get_device()
-    print(f"设备: {device}, 模型: {args.size}, 迭代 {args.iters} 轮")
+    print(f"设备: {device}, 模型: {args.size}, 温度: {args.temperature}, 迭代 {args.iters} 轮")
 
     # 初始模型: 空则从规则Bot数据BC热身
     model = build_model(args.size).to(device)
     replay = {"feats": [], "acts": [], "rets": []}
+    bc_data_saved = None  # 永久保留BC数据, 防AWR遗忘
 
     if args.init and os.path.exists(args.init):
         ckpt = torch.load(args.init, map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model"])
         print(f"加载初始模型: {args.init}")
+        # 即使 --init, 也用BC数据作为回放池地基, 防止AWR遗忘
+        print("  补充BC数据到回放池(防遗忘)...")
+        bc_data_saved = generate_dataset(args.games_per_iter, workers=args.workers)
+        for k in replay:
+            replay[k].append(bc_data_saved[k])
     else:
         print("冷启动: 先用规则Bot数据做BC热身")
-        bc_data = generate_dataset(args.games_per_iter)
-        train_bc(model, bc_data, device, epochs=args.bc_epochs)
+        bc_data_saved = generate_dataset(args.games_per_iter, workers=args.workers)
+        train_bc(model, bc_data_saved, device, epochs=args.bc_epochs)
         for k in replay:
-            replay[k].append(bc_data[k])
+            replay[k].append(bc_data_saved[k])
 
     torch.save({"model": model.state_dict(), "size": args.size}, args.out)
     best_score = -1e9
 
     for it in range(args.iters):
         print(f"\n=== 迭代 {it + 1}/{args.iters} ===")
-        # 1. 当前模型自对弈(带探索温度)
-        print(f"  生成 {args.games_per_iter} 局(模型温度采样)...")
+        # 1. 当前模型自对弈(串行GPU, 确保数据质量)
+        print(f"  生成 {args.games_per_iter} 局(温度={args.temperature})...")
         from .selfplay import _net_chooser_factory
-        chooser = _net_chooser_factory(model, temperature=1.0)
+        chooser = _net_chooser_factory(model, temperature=args.temperature)
         new_data = generate_dataset(args.games_per_iter,
                                     seed0=500000 + it * 10000,
-                                    chooser=chooser)
+                                    chooser=chooser,
+                                    workers=args.workers)
         for k in replay:
             replay[k].append(new_data[k])
-        # 合并 + 截断
+        # 合并 + 截断(保留BC数据不被截掉)
+        bc_n = len(bc_data_saved["acts"]) if bc_data_saved is not None else 0
         merged = {}
         for k in replay:
             merged[k] = np.concatenate(replay[k])
-            if len(merged[k]) > args.buffer:
-                merged[k] = merged[k][-args.buffer:]
+            # 至少保留 BC 数据, 额外再多留 buffer - bc_n 条
+            keep = max(bc_n, min(len(merged[k]), args.buffer))
+            if keep < len(merged[k]):
+                # 保留 bc 数据 + 最新的 (keep - bc_n) 条自对弈数据
+                merged[k] = np.concatenate([merged[k][:bc_n],
+                                            merged[k][-(keep - bc_n):]])
         data = merged
-        print(f"  回放池样本: {len(data['acts'])}")
+        print(f"  回放池样本: {len(data['acts'])} (其中BC {bc_n})")
 
         # 2. AWR 更新
         train_awr(model, data, device, epochs=args.awr_epochs)

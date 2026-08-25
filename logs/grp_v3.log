@@ -1,0 +1,22 @@
+/home/zuofengrui.zfr/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+生成 200000 局, 5657393 样本, 耗时 2372s
+标签统计: var=26.445, 流局率=0.063
+GRP3 参数量: 4.53M, 训练 5457393, 验证 200000
+  GRP3 ep 1/40  mse=25.9423  ce=1.4224
+  GRP3 ep 5/40  mse=25.6637  ce=1.3992
+  GRP3 ep 10/40  mse=25.1781  ce=1.3813
+  GRP3 ep 15/40  mse=24.4603  ce=1.3551
+  GRP3 ep 20/40  mse=23.6133  ce=1.3235
+  GRP3 ep 25/40  mse=22.6409  ce=1.2858
+  GRP3 ep 30/40  mse=21.6460  ce=1.2451
+  GRP3 ep 35/40  mse=20.8662  ce=1.2113
+  GRP3 ep 40/40  mse=20.5536  ce=1.1972
+
+=== GRP3 验证 (相对视角, 决策者本人) ===
+MSE=22.158 var=26.488 R2=0.163 corr=0.427
+P(我赢)与是否胡牌相关性: 0.441, 胜者top1准确率: 0.397
+  进度 0.4-0.6: n=101638 mse=23.960 var=28.348 R2=0.155
+  进度 0.6-0.8: n=84921 mse=21.187 var=25.715 R2=0.176
+  进度 0.8-1.0: n=13441 mse=14.665 var=17.019 R2=0.138
+已保存 models/grp_v3.pt

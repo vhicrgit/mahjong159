@@ -1,8 +1,10 @@
-"""安康159 - 神经网络模型(模仿 Mortal 的 value/policy 双头结构)
+"""安康159 - 神经网络模型
 
-结构: 输入投影 -> N个残差块 -> policy头(打哪张牌, 28类) + value头(期望收益)
-Mortal 原版在牌位序列上用 Conv1D, 这里用全连接残差块(小规模验证足够,
-接口保持一致, 之后换 Conv1D 只需替换 body)。
+结构: 输入投影 -> N个残差块 -> Q头(每张牌的Q值, 28维) + value头(期望收益)
+
+Mortal 路线: DQN + CQL, Q值头替代策略头。
+- Q头: 输出每个动作的Q值, 推理时取 argmax
+- value头: 辅助损失, 估计局面期望收益
 
 模型大小通过 config 调节:
 - tiny:  hidden=128, blocks=4   (验证闭环用, CPU/MPS 秒级训练)
@@ -14,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .features import FEAT_DIM
+from .features_v2 import FEAT_DIM
 
 N_ACTIONS = 28  # 打出哪种牌
 
@@ -36,7 +38,7 @@ class MahjongNet(nn.Module):
         super().__init__()
         self.input_proj = nn.Linear(FEAT_DIM, hidden_dim)
         self.blocks = nn.ModuleList(ResBlock(hidden_dim) for _ in range(num_blocks))
-        self.policy_head = nn.Linear(hidden_dim, N_ACTIONS)
+        self.q_head = nn.Linear(hidden_dim, N_ACTIONS)       # Q值头
         self.value_head = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -47,22 +49,33 @@ class MahjongNet(nn.Module):
         h = F.relu(self.input_proj(x))
         for b in self.blocks:
             h = b(h)
-        logits = self.policy_head(h)          # (B, 28)
+        q_values = self.q_head(h)              # (B, 28) Q值
         value = self.value_head(h).squeeze(-1)  # (B,)
-        return logits, value
+        return q_values, value
+
+    def q(self, x, legal_mask=None):
+        """返回合法动作上的 Q 值"""
+        q_values, _ = self.forward(x)
+        if legal_mask is not None:
+            q_values = q_values.masked_fill(~legal_mask, -1e9)
+        return q_values
 
     def policy(self, x, legal_mask=None):
-        """返回合法动作上的概率分布"""
-        logits, _ = self.forward(x)
-        if legal_mask is not None:
-            logits = logits.masked_fill(~legal_mask, -1e9)
-        return F.softmax(logits, dim=-1)
+        """从 Q 值导出策略 (softmax over Q)"""
+        q_values = self.q(x, legal_mask)
+        return F.softmax(q_values, dim=-1)
+
+    def best_action(self, x, legal_mask=None):
+        """贪心选择最优动作"""
+        q_values = self.q(x, legal_mask)
+        return q_values.argmax(dim=-1)
 
 
 MODEL_CONFIGS = {
     "tiny": dict(hidden_dim=128, num_blocks=4),
     "small": dict(hidden_dim=256, num_blocks=8),
     "base": dict(hidden_dim=512, num_blocks=12),
+    "large": dict(hidden_dim=1024, num_blocks=20),
 }
 
 

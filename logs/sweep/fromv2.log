@@ -1,0 +1,69 @@
+/home/zuofengrui.zfr/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+数据: 5653618 样本, 合法率验证通过
+初始化: models/dqn_off_v2.pt, 6.77M 参数
+训练前评估: 胜率 24.3%, 场均 +0.05
+  ep 1/20  dqn=0.2954  cql=0.0154  v=0.2981
+  ep 2/20  dqn=0.2945  cql=0.0153  v=0.2972
+  ep 3/20  dqn=0.2936  cql=0.0152  v=0.2964
+  ep 4/20  dqn=0.2927  cql=0.0151  v=0.2954
+  ep 5/20  dqn=0.2917  cql=0.0150  v=0.2944
+  ep 6/20  dqn=0.2906  cql=0.0149  v=0.2934
+  ep 7/20  dqn=0.2895  cql=0.0148  v=0.2923
+  ep 8/20  dqn=0.2884  cql=0.0146  v=0.2911
+  ep 9/20  dqn=0.2873  cql=0.0145  v=0.2901
+  ep 10/20  dqn=0.2862  cql=0.0144  v=0.2890
+  ep 11/20  dqn=0.2852  cql=0.0143  v=0.2879
+  ep 12/20  dqn=0.2842  cql=0.0142  v=0.2870
+  ep 13/20  dqn=0.2833  cql=0.0141  v=0.2860
+  ep 14/20  dqn=0.2824  cql=0.0140  v=0.2852
+  ep 15/20  dqn=0.2817  cql=0.0140  v=0.2845
+  ep 16/20  dqn=0.2811  cql=0.0139  v=0.2839
+  ep 17/20  dqn=0.2806  cql=0.0139  v=0.2834
+  ep 18/20  dqn=0.2802  cql=0.0138  v=0.2830
+  ep 19/20  dqn=0.2799  cql=0.0138  v=0.2827
+  ep 20/20  dqn=0.2797  cql=0.0138  v=0.2825
+[20ep] 评估: 胜率 27.0%, 场均 +0.19 ★
+  ep 1/20  dqn=0.2859  cql=0.0147  v=0.2885
+  ep 2/20  dqn=0.2850  cql=0.0146  v=0.2876
+  ep 3/20  dqn=0.2842  cql=0.0145  v=0.2868
+  ep 4/20  dqn=0.2835  cql=0.0144  v=0.2860
+  ep 5/20  dqn=0.2823  cql=0.0144  v=0.2849
+  ep 6/20  dqn=0.2813  cql=0.0143  v=0.2839
+  ep 7/20  dqn=0.2801  cql=0.0141  v=0.2827
+  ep 8/20  dqn=0.2791  cql=0.0141  v=0.2817
+  ep 9/20  dqn=0.2780  cql=0.0139  v=0.2805
+  ep 10/20  dqn=0.2769  cql=0.0139  v=0.2795
+  ep 11/20  dqn=0.2757  cql=0.0137  v=0.2783
+  ep 12/20  dqn=0.2747  cql=0.0136  v=0.2773
+  ep 13/20  dqn=0.2738  cql=0.0136  v=0.2764
+  ep 14/20  dqn=0.2729  cql=0.0135  v=0.2755
+  ep 15/20  dqn=0.2722  cql=0.0134  v=0.2748
+  ep 16/20  dqn=0.2715  cql=0.0134  v=0.2742
+  ep 17/20  dqn=0.2710  cql=0.0133  v=0.2736
+  ep 18/20  dqn=0.2706  cql=0.0133  v=0.2732
+  ep 19/20  dqn=0.2703  cql=0.0133  v=0.2729
+  ep 20/20  dqn=0.2701  cql=0.0133  v=0.2727
+[40ep] 评估: 胜率 27.2%, 场均 +0.22 ★
+  ep 1/20  dqn=0.2773  cql=0.0141  v=0.2797
+  ep 2/20  dqn=0.2764  cql=0.0140  v=0.2788
+  ep 3/20  dqn=0.2757  cql=0.0140  v=0.2781
+  ep 4/20  dqn=0.2748  cql=0.0139  v=0.2772
+  ep 5/20  dqn=0.2737  cql=0.0138  v=0.2762
+  ep 6/20  dqn=0.2727  cql=0.0137  v=0.2752
+  ep 7/20  dqn=0.2716  cql=0.0136  v=0.2741
+  ep 8/20  dqn=0.2705  cql=0.0135  v=0.2729
+  ep 9/20  dqn=0.2694  cql=0.0134  v=0.2718
+  ep 10/20  dqn=0.2683  cql=0.0133  v=0.2708
+  ep 11/20  dqn=0.2672  cql=0.0132  v=0.2697
+  ep 12/20  dqn=0.2661  cql=0.0131  v=0.2686
+  ep 13/20  dqn=0.2652  cql=0.0131  v=0.2677
+  ep 14/20  dqn=0.2644  cql=0.0130  v=0.2668
+  ep 15/20  dqn=0.2635  cql=0.0130  v=0.2660
+  ep 16/20  dqn=0.2629  cql=0.0129  v=0.2654
+  ep 17/20  dqn=0.2623  cql=0.0129  v=0.2649
+  ep 18/20  dqn=0.2619  cql=0.0128  v=0.2644
+  ep 19/20  dqn=0.2616  cql=0.0128  v=0.2641
+  ep 20/20  dqn=0.2614  cql=0.0128  v=0.2639
+[60ep] 评估: 胜率 27.2%, 场均 +0.22
+完成。最优场均 +0.22

@@ -1,0 +1,25 @@
+/home/zuofengrui.zfr/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+加载数据 models/grp_data.npz: 1414978 样本
+标签统计: mean=0.000 std=5.244 var=27.505
+GRP 参数量: 3.48M, 训练样本 1273481, 验证样本 141497
+  GRP ep 1/60  mse=27.2265
+  GRP ep 5/60  mse=26.8722
+  GRP ep 10/60  mse=26.0322
+  GRP ep 15/60  mse=25.8797
+  GRP ep 20/60  mse=25.7976
+  GRP ep 25/60  mse=25.6392
+  GRP ep 30/60  mse=25.5085
+  GRP ep 35/60  mse=25.2472
+  GRP ep 40/60  mse=24.9938
+  GRP ep 45/60  mse=24.7175
+  GRP ep 50/60  mse=24.4987
+  GRP ep 55/60  mse=24.3656
+  GRP ep 60/60  mse=24.3195
+
+=== GRP 验证 (决策者本人得分) ===
+MSE=22.515 标签var=26.617 R2=0.154 corr=0.397
+  进度 0.4-0.6: n=71895 mse=23.821 var=28.202 R2=0.155
+  进度 0.6-0.8: n=60298 mse=21.957 var=26.091 R2=0.158
+  进度 0.8-1.0: n=9304 mse=16.047 var=17.622 R2=0.089
+GRP 模型已保存 models/grp_v2.pt

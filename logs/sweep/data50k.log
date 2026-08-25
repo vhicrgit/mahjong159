@@ -1,0 +1,14 @@
+/home/zuofengrui.zfr/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+Traceback (most recent call last):
+  File "/opt/conda/envs/python3.10/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/opt/conda/envs/python3.10/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/zuofengrui.zfr/mahjong159/backend/rl/dqn_offline.py", line 167, in <module>
+    main()
+  File "/home/zuofengrui.zfr/mahjong159/backend/rl/dqn_offline.py", line 116, in main
+    feats, acts, rets = z["feats"], z["acts"], z["rets"]
+  File "/home/zuofengrui.zfr/.local/lib/python3.10/site-packages/numpy/lib/npyio.py", line 263, in __getitem__
+    raise KeyError(f"{key} is not a file in the archive")
+KeyError: 'acts is not a file in the archive'

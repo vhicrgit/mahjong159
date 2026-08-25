@@ -1,0 +1,19 @@
+/home/zuofengrui.zfr/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+生成 50000 局, 1414978 样本, 耗时 447.0s (112 局/s)
+数据已保存 models/grp_data.npz
+标签统计: mean=0.000 std=5.244 var=27.505
+GRP 参数量: 0.29M, 训练样本 1273481, 验证样本 141497
+  GRP ep 1/30  mse=27.1123
+  GRP ep 5/30  mse=26.5679
+  GRP ep 10/30  mse=25.8534
+  GRP ep 15/30  mse=25.7004
+  GRP ep 20/30  mse=25.5803
+  GRP ep 25/30  mse=25.4973
+  GRP ep 30/30  mse=25.4610
+
+=== GRP 验证 ===
+整体 MSE=25.687 MAE=3.887 (标签方差=27.456, 方差解释比 R2=0.064)
+  进度 0-1: n=71895 mse=26.739 标签var=28.431 R2=0.059
+  进度 1-1: n=9304 mse=18.812 标签var=19.895 R2=0.054
+GRP 模型已保存 models/grp_v1.pt

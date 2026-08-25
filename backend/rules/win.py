@@ -81,6 +81,11 @@ def _all_melds_cached(counts: tuple, red: int) -> bool:
     return _all_melds(counts, red)
 
 
+@lru_cache(maxsize=500000)
+def shanten_cached(tiles_counts: tuple) -> int:
+    return shanten(list(tiles_counts))
+
+
 def is_win(tiles_counts: list[int]) -> bool:
     """判断计数向量(张数 mod 3 == 2)是否可胡牌(含红中癞子)
 
@@ -109,6 +114,126 @@ def is_win(tiles_counts: list[int]) -> bool:
     return False
 
 
+@lru_cache(maxsize=500000)
+def _dfs_cached(counts: tuple, red_left: int) -> tuple:
+    """模块级 DFS。原实现是 shanten 内的闭包 + lru_cache —— 每次调用
+    重建闭包导致缓存永不命中, MC rollout 全冷查询。提升到模块级后
+    缓存跨调用共享。"""
+    counts = list(counts)
+    best = (0, 0, 0)  # m, t, p
+    t = -1
+    for i in range(27):
+        if counts[i] > 0:
+            t = i
+            break
+    if t == -1:
+        m, rem = divmod(red_left, 3)
+        if rem == 2:
+            return (m, 0, 1)
+        return (m, 0, 0)
+
+    # 选项1: 孤张跳过
+    counts[t] -= 1
+    sub = _dfs_cached(tuple(counts), red_left)
+    best = _combine(best, sub)
+    counts[t] += 1
+
+    # 选项2: 对子(将)
+    if counts[t] >= 2:
+        counts[t] -= 2
+        sub = _dfs_cached(tuple(counts), red_left)
+        best = _combine(best, (sub[0], sub[1], sub[2] + 1))
+        counts[t] += 2
+    if counts[t] >= 1 and red_left >= 1:
+        counts[t] -= 1
+        sub = _dfs_cached(tuple(counts), red_left - 1)
+        best = _combine(best, (sub[0], sub[1], sub[2] + 1))
+        counts[t] += 1
+
+    # 选项3: 刻子
+    if counts[t] >= 3:
+        counts[t] -= 3
+        sub = _dfs_cached(tuple(counts), red_left)
+        best = _combine(best, (sub[0] + 1, sub[1], sub[2]))
+        counts[t] += 3
+    if counts[t] >= 2 and red_left >= 1:
+        counts[t] -= 2
+        sub = _dfs_cached(tuple(counts), red_left - 1)
+        best = _combine(best, (sub[0] + 1, sub[1], sub[2]))
+        counts[t] += 2
+
+    # 选项4/5: 顺子/搭子 (同原逻辑, 仅递归名替换)
+    s = tile_suit(t)
+    r = tile_rank(t)
+    if s != HZ and r <= 7:
+        t1, t2 = t + 1, t + 2
+        need = 0
+        use = [1, 1, 1]
+        if counts[t] >= 1:
+            use[0] = 1
+        else:
+            need += 1
+        if t1 < 27 and counts[t1] >= 1:
+            use[1] = 1
+        else:
+            need += 1
+        if t2 < 27 and counts[t2] >= 1:
+            use[2] = 1
+        else:
+            need += 1
+        if need <= red_left:
+            counts[t] -= use[0]
+            counts[t1] -= use[1]
+            counts[t2] -= use[2]
+            sub = _dfs_cached(tuple(counts), red_left - need)
+            best = _combine(best, (sub[0] + 1, sub[1], sub[2]))
+            counts[t] += use[0]
+            counts[t1] += use[1]
+            counts[t2] += use[2]
+
+        # 两面 t,t+1 (红中补)
+        if t1 < 27:
+            need = (0 if counts[t] >= 1 else 1) + (
+                0 if counts[t1] >= 1 else 1)
+            if 0 < need <= red_left:
+                u0 = 1 if counts[t] >= 1 else 0
+                u1 = 1 if counts[t1] >= 1 else 0
+                counts[t] -= u0
+                counts[t1] -= u1
+                sub = _dfs_cached(tuple(counts), red_left - need)
+                best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
+                counts[t] += u0
+                counts[t1] += u1
+            if counts[t] >= 1 and counts[t1] >= 1:
+                counts[t] -= 1
+                counts[t1] -= 1
+                sub = _dfs_cached(tuple(counts), red_left)
+                best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
+                counts[t] += 1
+                counts[t1] += 1
+        # 嵌张 t,t+2 (红中补)
+        if t2 < 27:
+            need = (0 if counts[t] >= 1 else 1) + (
+                0 if counts[t2] >= 1 else 1)
+            if 0 < need <= red_left:
+                u0 = 1 if counts[t] >= 1 else 0
+                u2 = 1 if counts[t2] >= 1 else 0
+                counts[t] -= u0
+                counts[t2] -= u2
+                sub = _dfs_cached(tuple(counts), red_left - need)
+                best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
+                counts[t] += u0
+                counts[t2] += u2
+            if counts[t] >= 1 and counts[t2] >= 1:
+                counts[t] -= 1
+                counts[t2] -= 1
+                sub = _dfs_cached(tuple(counts), red_left)
+                best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
+                counts[t] += 1
+                counts[t2] += 1
+    return best
+
+
 def shanten(tiles_counts: list[int]) -> int:
     """最小向听数(0=听牌, -1=已胡)。支持红中。
 
@@ -117,138 +242,7 @@ def shanten(tiles_counts: list[int]) -> int:
     """
     red = tiles_counts[RED]
     counts = tuple(tiles_counts[:27])
-
-    @lru_cache(maxsize=None)
-    def dfs(counts, red_left):
-        # 返回在此状态下能获得的最大得分 score = 2*m + t (+pair 计入 t/p)
-        # 更精确: 返回 (m, t, p) 最优组合的最大化 2m+t (p 单独记录)
-        counts = list(counts)
-        best = (0, 0, 0)  # m, t, p
-        t = -1
-        for i in range(27):
-            if counts[i] > 0:
-                t = i
-                break
-        if t == -1:
-            # 剩余红中: 每3张成面子; 余2张成将; 余1张为孤张无贡献
-            m, rem = divmod(red_left, 3)
-            if rem == 2:
-                return (m, 0, 1)
-            return (m, 0, 0)
-
-        def relax(nm, nt, np_):
-            nonlocal best
-            m = best[0] + nm
-            t_ = best[1] + nt
-            p = best[2] + np_
-            # 约束: m <= 4, m + t <= 4, p <= 1
-            m2 = min(m, 4)
-            t2 = min(t_, max(0, 4 - m2))
-            p2 = min(p, 1)
-            best = (m2, t2, p2)
-
-        # 选项1: 将 t 当孤张跳过
-        counts[t] -= 1
-        sub = dfs(tuple(counts), red_left)
-        best = _combine(best, sub)
-        counts[t] += 1
-
-        # 选项2: 对子(将)
-        if counts[t] >= 2:
-            counts[t] -= 2
-            sub = dfs(tuple(counts), red_left)
-            best = _combine(best, (sub[0], sub[1], sub[2] + 1))
-            counts[t] += 2
-        if counts[t] >= 1 and red_left >= 1:
-            counts[t] -= 1
-            sub = dfs(tuple(counts), red_left - 1)
-            best = _combine(best, (sub[0], sub[1], sub[2] + 1))
-            counts[t] += 1
-
-        # 选项3: 刻子
-        if counts[t] >= 3:
-            counts[t] -= 3
-            sub = dfs(tuple(counts), red_left)
-            best = _combine(best, (sub[0] + 1, sub[1], sub[2]))
-            counts[t] += 3
-        if counts[t] >= 2 and red_left >= 1:
-            counts[t] -= 2
-            sub = dfs(tuple(counts), red_left - 1)
-            best = _combine(best, (sub[0] + 1, sub[1], sub[2]))
-            counts[t] += 2
-
-        # 选项4: 顺子
-        s = tile_suit(t)
-        r = tile_rank(t)
-        if s != HZ and r <= 7:
-            t1, t2 = t + 1, t + 2
-            need = 0
-            use = [0, 0, 0]
-            if counts[t] >= 1:
-                use[0] = 1
-            else:
-                need += 1
-            if t1 < 27 and counts[t1] >= 1:
-                use[1] = 1
-            else:
-                need += 1
-            if t2 < 27 and counts[t2] >= 1:
-                use[2] = 1
-            else:
-                need += 1
-            if need <= red_left:
-                counts[t] -= use[0]
-                counts[t1] -= use[1]
-                counts[t2] -= use[2]
-                sub = dfs(tuple(counts), red_left - need)
-                best = _combine(best, (sub[0] + 1, sub[1], sub[2]))
-                counts[t] += use[0]
-                counts[t1] += use[1]
-                counts[t2] += use[2]
-
-            # 选项5: 搭子(两面/嵌张), 用红中补
-            # 两面 t,t+1
-            if t1 < 27:
-                need = (0 if counts[t] >= 1 else 1) + (0 if counts[t1] >= 1 else 1)
-                if 0 < need <= red_left:
-                    u0 = 1 if counts[t] >= 1 else 0
-                    u1 = 1 if counts[t1] >= 1 else 0
-                    counts[t] -= u0
-                    counts[t1] -= u1
-                    sub = dfs(tuple(counts), red_left - need)
-                    best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
-                    counts[t] += u0
-                    counts[t1] += u1
-                # 已有两张的两面(不用红中)
-                if counts[t] >= 1 and counts[t1] >= 1:
-                    counts[t] -= 1
-                    counts[t1] -= 1
-                    sub = dfs(tuple(counts), red_left)
-                    best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
-                    counts[t] += 1
-                    counts[t1] += 1
-            # 嵌张 t,t+2
-            if t2 < 27:
-                need = (0 if counts[t] >= 1 else 1) + (0 if counts[t2] >= 1 else 1)
-                if 0 < need <= red_left:
-                    u0 = 1 if counts[t] >= 1 else 0
-                    u2 = 1 if counts[t2] >= 1 else 0
-                    counts[t] -= u0
-                    counts[t2] -= u2
-                    sub = dfs(tuple(counts), red_left - need)
-                    best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
-                    counts[t] += u0
-                    counts[t2] += u2
-                if counts[t] >= 1 and counts[t2] >= 1:
-                    counts[t] -= 1
-                    counts[t2] -= 1
-                    sub = dfs(tuple(counts), red_left)
-                    best = _combine(best, (sub[0], sub[1] + 1, sub[2]))
-                    counts[t] += 1
-                    counts[t2] += 1
-        return best
-
-    m, t, p = dfs(counts, red)
+    m, t, p = _dfs_cached(counts, red)
     m = min(m, 4)
     t = min(t, 4 - m)
     p = min(p, 1)

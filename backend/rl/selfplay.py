@@ -10,13 +10,16 @@
   rets:   (N,)     float32  局终收益
 """
 
+import multiprocessing as mp
 import numpy as np
 import torch
 
 from ..game.engine import Game
 from ..ai.bot import Bot
-from .features import encode_state
+from .features_v2 import encode_state
 from .model import legal_discard_mask
+
+_N_WORKERS = min(mp.cpu_count(), 32)
 
 
 def _net_chooser_factory(model, temperature=1.0):
@@ -77,16 +80,54 @@ def play_one_game(seed: int, chooser=None) -> tuple[list[np.ndarray], list[int],
     return feats, acts, rets
 
 
-def generate_dataset(n_games: int, seed0: int = 0, chooser=None) -> dict:
-    """生成 n_games 局自对弈数据"""
-    all_feats, all_acts, all_rets = [], [], []
-    for i in range(n_games):
-        f, a, r = play_one_game(seed0 + i, chooser=chooser)
-        all_feats.extend(f)
-        all_acts.extend(a)
-        all_rets.extend(r)
-        if (i + 1) % 50 == 0:
-            print(f"  已生成 {i + 1}/{n_games} 局, 样本 {len(all_acts)}")
+def _play_one_game_wrapper(args):
+    """multiprocessing worker wrapper"""
+    seed, model_state_dict, size, temperature = args
+    if model_state_dict is not None:
+        from .model import build_model
+        device = torch.device("cuda" if torch.cuda.is_available() and not True else "cpu")
+        model = build_model(size)
+        model.load_state_dict(model_state_dict)
+        model.eval()
+        chooser = _net_chooser_factory(model, temperature)
+    else:
+        chooser = None
+    return play_one_game(seed, chooser=chooser)
+
+
+def generate_dataset(n_games: int, seed0: int = 0, chooser=None,
+                     workers: int = 0) -> dict:
+    """生成 n_games 局自对弈数据
+
+    chooser: None 时用规则Bot(并行), callable 时用模型采样(串行GPU)
+    """
+    workers = workers or _N_WORKERS
+
+    if chooser is None and workers > 1:
+        # 规则Bot: 并行多进程
+        tasks = [(seed0 + i, None, None, 0.0) for i in range(n_games)]
+        n_workers = min(workers, n_games)
+        with mp.Pool(n_workers) as pool:
+            results = list(pool.imap_unordered(
+                _play_one_game_wrapper, tasks,
+                chunksize=max(1, n_games // n_workers // 4)))
+            print(f"  并行生成完成: {n_games} 局")
+        all_feats, all_acts, all_rets = [], [], []
+        for f, a, r in results:
+            all_feats.extend(f)
+            all_acts.extend(a)
+            all_rets.extend(r)
+    else:
+        # 模型采样(串行, GPU)
+        all_feats, all_acts, all_rets = [], [], []
+        for i in range(n_games):
+            f, a, r = play_one_game(seed0 + i, chooser=chooser)
+            all_feats.extend(f)
+            all_acts.extend(a)
+            all_rets.extend(r)
+            if (i + 1) % 50 == 0:
+                print(f"  已生成 {i + 1}/{n_games} 局, 样本 {len(all_acts)}")
+
     return {
         "feats": np.stack(all_feats).astype(np.float32),
         "acts": np.asarray(all_acts, dtype=np.int64),
@@ -98,6 +139,6 @@ if __name__ == "__main__":
     import sys
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 200
     out = sys.argv[2] if len(sys.argv) > 2 else "selfplay_data.npz"
-    data = generate_dataset(n)
+    data = generate_dataset(n, workers=8)
     np.savez_compressed(out, **data)
     print(f"已保存 {out}: {data['acts'].shape[0]} 个决策样本")

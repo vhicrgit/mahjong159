@@ -1,0 +1,25 @@
+/home/zuofengrui.zfr/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+数据: 129038 样本, 合法率验证通过
+初始化: models/dqn_off_v5.pt
+base: 6.77M 参数
+训练前评估: 胜率 25.5%, 场均 +0.23
+  ep 1/5  dqn=7.3103  cql=7.2839  v=0.4040
+  ep 2/5  dqn=3.5835  cql=3.3578  v=0.4082
+  ep 3/5  dqn=2.4228  cql=2.3152  v=0.4100
+  ep 4/5  dqn=1.8449  cql=2.0128  v=0.4099
+  ep 5/5  dqn=1.6064  cql=1.9341  v=0.4097
+[5ep] 评估: 胜率 23.9%, 场均 -0.01
+  ep 1/5  dqn=1.3168  cql=1.8452  v=0.4094
+  ep 2/5  dqn=0.9630  cql=1.7373  v=0.4085
+  ep 3/5  dqn=0.8280  cql=1.6710  v=0.4062
+  ep 4/5  dqn=0.7735  cql=1.6310  v=0.4057
+  ep 5/5  dqn=0.7563  cql=1.6141  v=0.4050
+[10ep] 评估: 胜率 25.5%, 场均 +0.15
+  ep 1/5  dqn=0.7325  cql=1.5973  v=0.4041
+  ep 2/5  dqn=0.6899  cql=1.5580  v=0.4022
+  ep 3/5  dqn=0.6797  cql=1.5267  v=0.4015
+  ep 4/5  dqn=0.6688  cql=1.5073  v=0.4005
+  ep 5/5  dqn=0.6707  cql=1.4972  v=0.4000
+[15ep] 评估: 胜率 25.3%, 场均 +0.12
+完成。最优场均 +0.23
