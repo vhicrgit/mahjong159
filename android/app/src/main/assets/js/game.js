@@ -1,42 +1,42 @@
-/* 安康159麻将 - web版交互逻辑(增强版)
+/* 安康159麻将 - 手机版交互逻辑(增强版)
  * 音效 + SVG牌面 + 拖拽排序 + 出牌动画 + 累计积分
  */
 
-const SUITS = ["条", "饼", "万"];
-let state = null;
-let selectedUid = -1;          // 选中的手牌唯一id
+let game = null;
+let selectedUid = -1;         // 选中的手牌唯一id
 let lastAnalysis = null;
-let displayHand = [];          // [{uid, tile}] 显示手牌(可拖拽排序)
+let displayHand = [];         // [{uid, tile}] 显示手牌(可拖拽排序)
 let uidCounter = 1;
-let lastActionPlayed = "";     // 用于音效: 跟踪已播放的动作
+let lastLogLen = 0;           // 用于音效: 跟踪新增日志
+const AI_DELAY = 500;
 const SEAT_NAMES = ["我", "下家", "对家", "上家"];
 
 // ---------- 累计积分 ----------
 function getTotalScores() {
-  try { return JSON.parse(localStorage.getItem("mj159_total_web") || "[0,0,0,0]"); }
+  try { return JSON.parse(localStorage.getItem("mj159_total") || "[0,0,0,0]"); }
   catch (e) { return [0, 0, 0, 0]; }
 }
 function addTotalScores(deltas) {
   const t = getTotalScores();
   for (let i = 0; i < 4; i++) t[i] += deltas[i];
-  localStorage.setItem("mj159_total_web", JSON.stringify(t));
+  localStorage.setItem("mj159_total", JSON.stringify(t));
   return t;
 }
 function resetTotalScores() {
-  localStorage.setItem("mj159_total_web", JSON.stringify([0, 0, 0, 0]));
+  localStorage.setItem("mj159_total", JSON.stringify([0, 0, 0, 0]));
 }
 
 // ---------- 工具 ----------
 function tileInfo(t) {
-  if (t === 27) return { suit: -1, name: "红中" };
+  if (t === RED) return { suit: -1, name: "红中" };
   const suit = Math.floor(t / 9), num = (t % 9) + 1;
-  return { suit, name: num + SUITS[suit] };
+  return { suit, name: num + SUIT_NAMES[suit] };
 }
 
 function makeTileEl(t, size, clickable, uid) {
   const el = document.createElement("div");
   el.className = "tile face" + (size ? " " + size : "");
-  el.innerHTML = TileArt.svg(t);
+  el.innerHTML = TileArt.svg(t, undefined, undefined);
   if (clickable) {
     el.dataset.uid = uid;
     el.dataset.tile = t;
@@ -60,42 +60,23 @@ function makeMeldEl(m, size) {
   return wrap;
 }
 
-// ---------- API ----------
-async function api(path, body) {
-  const opt = body !== undefined
-    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-    : {};
-  const r = await fetch("/api/" + path, opt);
-  if (!r.ok) { console.error("API error", path); return null; }
-  return r.json();
-}
-
-async function newGame() {
-  selectedUid = -1;
-  lastAnalysis = null;
-  displayHand = [];
-  uidCounter = 1;
-  document.getElementById("result-overlay").classList.add("hidden");
-  document.getElementById("review-panel").classList.add("hidden");
-  state = await api("new_game", { dealer: 0 });
-  render();
-  refreshAnalysis();
-}
-
-// ---------- 手牌同步(服务器手牌 -> 显示手牌) ----------
+// ---------- 手牌同步(逻辑手牌 -> 显示手牌) ----------
 function syncDisplayHand() {
-  const logical = state.players[0].hand || [];
+  const logical = game.players[0].hand;  // 引擎手牌(有序)
+  // 多重集合计数
   const logicalCount = {};
   logical.forEach(t => logicalCount[t] = (logicalCount[t] || 0) + 1);
+  // 移除 displayHand 中已不在逻辑手牌里的牌
   displayHand = displayHand.filter(c => {
     if (logicalCount[c.tile] > 0) { logicalCount[c.tile]--; return true; }
     return false;
   });
+  // 添加新摸到的牌(logicalCount 里剩余的), 插入到适当位置(不整体重排, 保留手动排序)
   const newTiles = [];
   Object.keys(logicalCount).forEach(k => {
-    for (let i = 0; i < logicalCount[k]; i++) newTiles.push(Number(k));
+    const t = Number(k);
+    for (let i = 0; i < logicalCount[k]; i++) newTiles.push(t);
   });
-  // 新牌插入到适当位置(不整体重排, 保留手动排序)
   for (const t of newTiles) {
     insertTileSorted(t);
   }
@@ -118,84 +99,131 @@ function sortHand() {
   renderMyHand();
 }
 
-// ---------- 音效(根据最近动作) ----------
-function playSoundsFromState() {
-  if (!state) return;
-  const la = state.last_action || "";
-  if (la === lastActionPlayed) return;
-  lastActionPlayed = la;
-  if (state.phase === "game_over") {
-    if (state.huangzhuang) SoundFX.huang();
-    else if (state.winner === 0) SoundFX.win();
-    else SoundFX.lose();
-    return;
+// ---------- 音效(根据新增日志) ----------
+function playSoundsFromLog() {
+  if (!game) return;
+  const logs = game.log.slice(lastLogLen);
+  lastLogLen = game.log.length;
+  for (const line of logs) {
+    if (line.includes("胡牌")) {
+      const m = line.match(/座位(\d)/);
+      if (m && Number(m[1]) === 0) SoundFX.win(); else SoundFX.lose();
+    } else if (line.includes("黄庄")) {
+      SoundFX.huang();
+    } else if (line.includes("杠")) {
+      SoundFX.gang();
+    } else if (line.includes("碰")) {
+      SoundFX.peng();
+    } else if (line.includes("打出")) {
+      SoundFX.discard();
+    } else if (line.includes("摸牌") && line.includes("座位0")) {
+      SoundFX.draw();
+    }
   }
-  if (la.includes("打出")) SoundFX.discard();
-  else if (la.includes("杠")) SoundFX.gang();
-  else if (la.includes("碰")) SoundFX.peng();
-  else if (la.includes("摸牌") && la.includes("座位0")) SoundFX.draw();
+}
+
+// ---------- 游戏流程 ----------
+function newGame() {
+  selectedUid = -1;
+  lastAnalysis = null;
+  displayHand = [];
+  uidCounter = 1;
+  lastLogLen = 0;
+  document.getElementById("result-overlay").classList.add("hidden");
+  document.getElementById("review-panel").classList.add("hidden");
+  document.getElementById("analysis-panel").classList.add("hidden");
+  game = new Game(0);
+  render();
+  refreshAnalysis();
+  maybeRunAI();
+}
+
+function maybeRunAI() {
+  if (!game || game.phase === "game_over") { render(); return; }
+  if (game.phase === "discard_wait" && game.turn === 0) { render(); return; }
+  if (game.phase === "react_wait" && game.pendingActions[0]) { render(); return; }
+
+  setTimeout(() => {
+    if (!game || game.phase === "game_over") { render(); return; }
+    if (game.phase === "discard_wait" && game.turn !== 0) {
+      const bot = new Bot(game, game.turn);
+      try { game.discard(game.turn, bot.chooseDiscard()); } catch (e) { console.error(e); }
+    } else if (game.phase === "react_wait") {
+      const seats = Object.keys(game.pendingActions).map(Number).filter(s => s !== 0);
+      if (seats.length) {
+        const s = seats[0];
+        const bot = new Bot(game, s);
+        const tile = game.lastDiscard;
+        try {
+          if (game.pendingActions[s].gang && bot.decideGang(tile, "ming")) game.gang(s);
+          else if (game.pendingActions[s].peng && bot.decidePeng(tile)) game.peng(s);
+          else game.pass(s);
+        } catch (e) { console.error(e); }
+      }
+    }
+    render();
+    refreshAnalysis();
+    maybeRunAI();
+  }, AI_DELAY);
 }
 
 // ---------- 渲染 ----------
 function render() {
-  if (!state) return;
+  if (!game) return;
   syncDisplayHand();
-  document.getElementById("wall-info").textContent = "牌堆: " + state.wall_remaining;
-  document.getElementById("dealer-info").textContent = "庄家: " + SEAT_NAMES[state.dealer];
+  document.getElementById("wall-info").textContent = "剩" + game.wallRemaining();
 
   // 对手
   for (let s = 1; s <= 3; s++) {
-    const p = state.players[s];
+    const p = game.players[s];
     const box = document.getElementById("opp-" + s);
     const hand = box.querySelector(".opp-hand");
     const melds = box.querySelector(".opp-melds");
     hand.innerHTML = "";
     melds.innerHTML = "";
-    for (let i = 0; i < p.hand_count; i++) hand.appendChild(makeBackEl(s === 2 ? "small" : "mini"));
-    for (const m of p.melds) melds.appendChild(makeMeldEl(m, "mini"));
+    for (let i = 0; i < p.hand.length; i++) hand.appendChild(makeBackEl("sm"));
+    for (const m of p.melds) melds.appendChild(makeMeldEl(m, "sm"));
   }
 
-  // 弃牌(最后一张高亮 + 方向飞入)
+  // 弃牌(最后一张高亮 + 飞入动画方向)
   const dirMap = { 0: "bottom", 1: "right", 2: "top", 3: "left" };
   for (let s = 0; s <= 3; s++) {
     const area = document.querySelector("#discard-" + s + " .discards");
     area.innerHTML = "";
-    const ds = state.players[s].discards;
+    const ds = game.players[s].discards;
     ds.forEach((t, i) => {
-      const el = makeTileEl(t, "mini");
-      if (i === ds.length - 1 && state.last_discarder === s) {
+      const el = makeTileEl(t, "sm");
+      if (i === ds.length - 1 && game.lastDiscarder === s) {
         el.classList.add("latest", "fly-" + dirMap[s]);
       }
       area.appendChild(el);
     });
   }
 
-  // 我的手牌
   renderMyHand();
 
   // 副露
-  const myMelds = document.getElementById("my-melds");
-  myMelds.innerHTML = "";
-  for (const m of state.players[0].melds) myMelds.appendChild(makeMeldEl(m, "small"));
+  const mm = document.getElementById("my-melds");
+  mm.innerHTML = "";
+  for (const m of game.players[0].melds) mm.appendChild(makeMeldEl(m, "md"));
 
-  // 状态提示
-  const statusEl = document.getElementById("my-status");
-  if (state.phase === "game_over") {
+  // 状态
+  const statusEl = document.getElementById("status");
+  if (game.phase === "game_over") {
     statusEl.innerHTML = "";
     showResult();
-  } else if (state.phase === "discard_wait" && state.turn === 0) {
-    statusEl.innerHTML = "轮到你出牌 - 点击手牌, 再点一次确认 <span class='hint-dim'>" + (state.last_action || "") + "</span>";
-  } else if (state.phase === "react_wait" && state.pending_actions && state.pending_actions["0"]) {
-    const who = SEAT_NAMES[state.last_discarder];
-    statusEl.innerHTML = `${who} 打出 <b class='hl-tile'>${tileInfo(state.last_discard).name}</b>, 你可碰/杠/过`;
+  } else if (game.phase === "discard_wait" && game.turn === 0) {
+    statusEl.innerHTML = "轮到你出牌 <span class='hint-dim'>" + (game.lastAction || "") + "</span>";
+  } else if (game.phase === "react_wait" && game.pendingActions[0]) {
+    const who = SEAT_NAMES[game.lastDiscarder];
+    statusEl.innerHTML = `${who} 打出 <b class='hl-tile'>${tileInfo(game.lastDiscard).name}</b>, 你可碰/杠/过`;
   } else {
-    statusEl.innerHTML = "等待其他玩家... <span class='hint-dim'>" + (state.last_action || "") + "</span>";
+    statusEl.innerHTML = "对手行动中... <span class='hint-dim'>" + (game.lastAction || "") + "</span>";
   }
 
-  updateTingHint();
   updateActionButtons();
   updateScoreBar();
-  playSoundsFromState();
+  playSoundsFromLog();
 }
 
 function renderMyHand() {
@@ -203,17 +231,18 @@ function renderMyHand() {
   myHand.innerHTML = "";
   const recTile = (lastAnalysis && lastAnalysis.discards && lastAnalysis.discards.length)
     ? lastAnalysis.discards[0].tile : null;
-  const drawnTile = (state.last_drawn && state.last_drawn.seat === 0) ? state.last_drawn.tile : null;
+  const drawnTile = (game.lastDrawn && game.lastDrawn.seat === 0) ? game.lastDrawn.tile : null;
   for (const card of displayHand) {
-    const el = makeTileEl(card.tile, "", true, card.uid);
+    const el = makeTileEl(card.tile, "lg", true, card.uid);
     if (card.uid === selectedUid) el.classList.add("selected");
     if (recTile !== null && card.tile === recTile) el.classList.add("recommended");
     if (drawnTile !== null && card.tile === drawnTile) el.classList.add("drawn");
     myHand.appendChild(el);
   }
+  updateTingHint();
 }
 
-// 听牌状态提示
+// 听牌提示
 function updateTingHint() {
   let hintEl = document.getElementById("ting-hint");
   if (!hintEl) {
@@ -221,12 +250,14 @@ function updateTingHint() {
     hintEl.id = "ting-hint";
     document.getElementById("my-area").prepend(hintEl);
   }
-  if (!state || state.phase === "game_over" || !lastAnalysis) { hintEl.innerHTML = ""; return; }
-  const h = lastAnalysis.hand;
-  if (h.is_ting && h.waits && h.waits.length) {
-    hintEl.innerHTML = `<span class='ting-ok'>已听牌, 听: ${h.waits.map(w => w.name).join(" ")}</span>`;
-  } else if (h.shanten !== undefined && h.shanten >= 0) {
-    hintEl.innerHTML = `<span class='ting-no'>向听数: ${h.shanten}</span>`;
+  if (!game || game.phase === "game_over") { hintEl.innerHTML = ""; return; }
+  const counts = game.players[0].handCounts();
+  const s = shanten(counts);
+  if (s === 0 && game.players[0].hand.length % 3 === 1) {
+    const names = waitingTiles(counts).map(tileName).join(" ");
+    hintEl.innerHTML = `<span class='ting-ok'>已听牌, 听: ${names}</span>`;
+  } else if (s >= 0) {
+    hintEl.innerHTML = `<span class='ting-no'>向听数: ${s}</span>`;
   }
 }
 
@@ -234,12 +265,12 @@ function updateTingHint() {
 function updateScoreBar() {
   let bar = document.getElementById("score-bar");
   if (!bar) {
-    bar = document.createElement("span");
+    bar = document.createElement("div");
     bar.id = "score-bar";
-    document.querySelector(".top-info").prepend(bar);
+    document.getElementById("topbar").appendChild(bar);
   }
   const t = getTotalScores();
-  bar.innerHTML = `累计 我:${t[0] > 0 ? "+" : ""}${t[0]} <span class='reset-score' id='reset-score'>清零</span>`;
+  bar.innerHTML = `累计积分 我:${t[0] > 0 ? "+" : ""}${t[0]} <span class='reset-score' id='reset-score'>清零</span>`;
   const rst = document.getElementById("reset-score");
   if (rst) rst.onclick = (e) => { e.stopPropagation(); resetTotalScores(); updateScoreBar(); };
 }
@@ -248,25 +279,26 @@ function updateActionButtons() {
   const bp = document.getElementById("btn-peng");
   const bg = document.getElementById("btn-gang");
   const bs = document.getElementById("btn-pass");
+  const actions = document.getElementById("actions");
   const gc = document.getElementById("gang-choices");
   bp.classList.add("hidden"); bg.classList.add("hidden"); bs.classList.add("hidden");
-  gc.classList.add("hidden"); gc.innerHTML = "";
+  actions.classList.add("hidden"); gc.classList.add("hidden"); gc.innerHTML = "";
 
-  if (!state || state.phase === "game_over") return;
+  if (!game || game.phase === "game_over") return;
 
-  if (state.phase === "react_wait" && state.pending_actions && state.pending_actions["0"]) {
-    const pa = state.pending_actions["0"];
+  if (game.phase === "react_wait" && game.pendingActions[0]) {
+    const pa = game.pendingActions[0];
+    actions.classList.remove("hidden");
     if (pa.peng) bp.classList.remove("hidden");
     if (pa.gang) bg.classList.remove("hidden");
     bs.classList.remove("hidden");
   }
-  if (state.phase === "discard_wait" && state.turn === 0) {
-    const gopts = state.gang_options || [];
-    if (gopts.length > 0) {
-      bg.classList.remove("hidden");
+  if (game.phase === "discard_wait" && game.turn === 0) {
+    const gopts = game.gangOptions(0);
+    if (gopts.length) {
       gc.classList.remove("hidden");
       for (const t of gopts) {
-        const el = makeTileEl(t, "small");
+        const el = makeTileEl(t, "md");
         el.onclick = () => doGangTile(t);
         gc.appendChild(el);
       }
@@ -276,44 +308,49 @@ function updateActionButtons() {
 
 // ---------- 交互: 点击选中/出牌 ----------
 function attachTileHandlers(el) {
-  el.addEventListener("click", () => {
-    if (dragMoved) return;
-    onTileClick(Number(el.dataset.tile), Number(el.dataset.uid));
+  // 点击(点按)出牌
+  el.addEventListener("click", (e) => {
+    if (dragMoved) return;  // 刚拖完不触发点击
+    const uid = Number(el.dataset.uid);
+    const tile = Number(el.dataset.tile);
+    onTileClick(tile, uid);
   });
+  // 拖拽排序
   el.addEventListener("pointerdown", onDragStart);
 }
 
 function onTileClick(tile, uid) {
-  if (!state) return;
-  if (state.phase === "discard_wait" && state.turn === 0) {
-    if (selectedUid === uid) doDiscard(tile);
+  if (!game) return;
+  if (game.phase === "discard_wait" && game.turn === 0) {
+    if (selectedUid === uid) doDiscard(tile, uid);
     else { selectedUid = uid; renderMyHand(); }
   }
 }
 
-async function doDiscard(t) {
+function doDiscard(tile, uid) {
   selectedUid = -1;
-  SoundFX.discard();
-  state = await api("discard", { tile: t });
+  recordDecision(tile);
+  try { game.discard(0, tile); } catch (e) { alert(e.message); }
   render();
   refreshAnalysis();
+  maybeRunAI();
 }
 
-async function doPeng() {
-  state = await api("peng", {}); SoundFX.peng();
+function doPeng() {
+  try { game.peng(0); SoundFX.peng(); } catch (e) { alert(e.message); }
   render(); refreshAnalysis();
 }
-async function doGang() {
-  state = await api("gang", {}); SoundFX.gang();
-  render(); refreshAnalysis();
+function doGang() {
+  try { game.gang(0); SoundFX.gang(); } catch (e) { alert(e.message); }
+  render(); refreshAnalysis(); maybeRunAI();
 }
-async function doGangTile(t) {
-  state = await api("gang", { tile: t }); SoundFX.gang();
-  render(); refreshAnalysis();
+function doGangTile(t) {
+  try { game.gang(0, t); SoundFX.gang(); } catch (e) { alert(e.message); }
+  render(); refreshAnalysis(); maybeRunAI();
 }
-async function doPass() {
-  state = await api("pass", {});
-  render(); refreshAnalysis();
+function doPass() {
+  try { game.pass(0); } catch (e) { alert(e.message); }
+  render(); refreshAnalysis(); maybeRunAI();
 }
 
 // ---------- 手牌拖拽排序 ----------
@@ -321,7 +358,7 @@ let dragState = null;
 let dragMoved = false;
 
 function onDragStart(e) {
-  if (!state || state.phase === "game_over") return;
+  if (!game || game.phase === "game_over") return;
   const el = e.currentTarget;
   dragState = {
     el,
@@ -352,7 +389,9 @@ function onDragEnd(e) {
   el.classList.remove("dragging");
   el.style.transform = "";
   el.style.zIndex = "";
+
   if (dragMoved) {
+    // 根据落点 x 计算目标位置
     const myHand = document.getElementById("my-hand");
     const tiles = [...myHand.querySelectorAll(".tile")];
     const dropX = e.clientX;
@@ -361,16 +400,43 @@ function onDragEnd(e) {
       const r = tiles[i].getBoundingClientRect();
       if (dropX < r.left + r.width / 2) { targetIndex = i; break; }
     }
+    // 重排 displayHand
     const card = displayHand.splice(dragState.startIndex, 1)[0];
     if (card) {
-      let insertAt = targetIndex > dragState.startIndex ? targetIndex - 1 : targetIndex;
+      let insertAt = targetIndex;
+      if (targetIndex > dragState.startIndex) insertAt = targetIndex - 1;
       displayHand.splice(Math.max(0, Math.min(insertAt, displayHand.length)), 0, card);
     }
     SoundFX.click();
     selectedUid = -1;
   }
   dragState = null;
+  // 延迟重置 dragMoved, 避免 click 误触
   setTimeout(() => { dragMoved = false; renderMyHand(); }, 50);
+}
+
+// ---------- 复盘记录 ----------
+function recordDecision(actualTile) {
+  try {
+    const az = new Analyzer(game, 0);
+    const hand = az.analyzeHand();
+    const opts = az.analyzeDiscards();
+    if (!opts.length) return;
+    const best = opts[0];
+    game.reviewLog.push({
+      step: game.reviewLog.length + 1,
+      hand: game.players[0].hand.slice().sort((a, b) => a - b),
+      actual: actualTile,
+      recommended: best.tile,
+      match: best.tile === actualTile,
+      shanten_before: hand.shanten,
+      shanten_after: best.shanten,
+      options: opts.slice(0, 4).map(o => ({
+        tile: o.tile, name: o.name, gang_risk: o.gang_risk,
+        wait_remain: o.wait_remain, shanten: o.shanten,
+      })),
+    });
+  } catch (e) { console.error(e); }
 }
 
 // ---------- 结算 ----------
@@ -379,28 +445,26 @@ function showResult() {
   overlay.classList.remove("hidden");
   const title = document.getElementById("result-title");
   const detail = document.getElementById("result-detail");
+  const fan = document.getElementById("fan-tiles");
   const scores = document.getElementById("result-scores");
 
-  const deltas = state.players.map(p => p.score_delta);
+  // 累计积分
+  const deltas = game.players.map(p => p.score_delta);
   const totals = addTotalScores(deltas);
 
-  if (state.huangzhuang) {
+  if (game.huangzhuang) {
     title.textContent = "黄庄";
-    detail.innerHTML = "牌堆剩余不足, 本局流局, 杠分不结算";
-    scores.innerHTML = "";
-    return;
+    detail.textContent = "牌堆剩余不足, 本局流局, 杠分不结算";
+    fan.innerHTML = "";
+  } else {
+    title.textContent = game.winner === 0 ? "你胡了!" : SEAT_NAMES[game.winner] + " 胡了";
+    detail.textContent = (game.winKind === "gangshang" ? "杠上花" : "自摸") +
+      " | 中出1/5/9共 " + game.n159 + " 张, 每家赔 " + (game.n159 + 1) + " 分";
+    fan.innerHTML = "";
+    for (const t of game.fan159) fan.appendChild(makeTileEl(t, "md"));
   }
-  title.textContent = (state.winner === 0 ? "你胡了!" : SEAT_NAMES[state.winner] + " 胡了");
-  const kindName = state.win_kind === "gangshang" ? "杠上花" : "自摸";
-  let d = `胡牌方式: ${kindName}<br>159翻牌: `;
-  d += '<div id="fan-tiles">';
-  for (const t of state.fan_159) d += makeTileEl(t, "small").outerHTML;
-  d += "</div>";
-  d += `中出 1/5/9 共 ${state.n_159} 张, 每家赔 ${state.n_159 + 1} 分`;
-  detail.innerHTML = d;
-
   let s = "";
-  state.players.forEach((p, i) => {
+  game.players.forEach((p, i) => {
     const cls = p.score_delta > 0 ? "score-row win" : "score-row";
     const sd = p.score_delta > 0 ? "+" + p.score_delta : "" + p.score_delta;
     const tt = totals[i] > 0 ? "+" + totals[i] : "" + totals[i];
@@ -410,20 +474,17 @@ function showResult() {
 }
 
 // ---------- 分析面板 ----------
-function toggleAnalysis() {
-  document.getElementById("analysis-panel").classList.toggle("hidden");
-}
-
-async function refreshAnalysis() {
-  const data = await api("analyze");
-  if (!data) return;
+function refreshAnalysis() {
+  if (!game || game.phase === "game_over") { lastAnalysis = null; return; }
+  const az = new Analyzer(game, 0);
+  const data = { hand: az.analyzeHand() };
+  if (game.phase === "discard_wait" && game.turn === 0) {
+    data.discards = az.analyzeDiscards();
+  }
   lastAnalysis = data;
   const panel = document.getElementById("analysis-panel");
   if (!panel.classList.contains("hidden")) renderAnalysis(data);
-  if (state && state.phase !== "game_over") {
-    renderMyHand();
-    updateTingHint();
-  }
+  renderMyHand();
 }
 
 function renderAnalysis(data) {
@@ -433,7 +494,7 @@ function renderAnalysis(data) {
   html += `<div class="ana-row">向听数: ${h.shanten}${h.is_ting ? " (已听牌)" : ""}</div>`;
   if (h.is_ting && h.waits.length) {
     html += '<div class="ana-row">听口:</div><div class="ana-wait-tiles">';
-    for (const w of h.waits) html += makeTileEl(w.tile, "mini").outerHTML;
+    for (const w of h.waits) html += makeTileEl(w.tile, "sm").outerHTML;
     html += `</div><div class="ana-row">进张剩余: ${h.wait_count} 张</div>`;
   }
   html += `<div class="ana-row">当前胡牌预期159: ${h.expected_fan159} 张</div>`;
@@ -455,7 +516,7 @@ function renderAnalysis(data) {
       const rpct = Math.round(d.gang_risk * 100);
       const rcls = d.gang_risk > 0.5 ? "risk-high" : (d.gang_risk > 0.2 ? "risk-mid" : "risk-low");
       html += `<div class="discard-suggest${i === 0 ? " best" : ""}">`;
-      html += makeTileEl(d.tile, "mini").outerHTML;
+      html += makeTileEl(d.tile, "sm").outerHTML;
       html += '<div class="info">';
       if (d.shanten === 0 && d.waits.length) {
         const wn = d.waits.map(w => w.name + "(" + w.remain + ")").join(" ");
@@ -472,31 +533,27 @@ function renderAnalysis(data) {
 }
 
 // ---------- 复盘 ----------
-function toggleReview() {
-  document.getElementById("review-panel").classList.toggle("hidden");
-}
-
-async function loadReview() {
-  const data = await api("review");
-  if (!data) return;
+function loadReview() {
+  const log = game ? game.reviewLog : [];
   const sum = document.getElementById("review-summary");
   const box = document.getElementById("review-content");
-  if (!data.total) {
+  if (!log.length) {
     sum.textContent = "本局还没有出牌记录";
     box.innerHTML = "";
     return;
   }
-  sum.innerHTML = `共 ${data.total} 手 | 与AI一致 ${data.matched} 手 | 一致率 ${Math.round(data.match_rate * 100)}%`;
+  const matched = log.filter(s => s.match).length;
+  sum.innerHTML = `共 ${log.length} 手 | 与AI一致 ${matched} 手 | 一致率 ${Math.round(matched / log.length * 100)}%`;
   let html = "";
-  for (const s of data.steps) {
+  for (const s of log) {
     const cls = s.match ? "match" : "mismatch";
     const verdict = s.match ? '<span class="verdict good">一致</span>' : '<span class="verdict bad">不符</span>';
     html += `<div class="review-step ${cls}">`;
     html += `<div class="step-head"><span class="step-no">第${s.step}手</span>${verdict}</div>`;
     html += '<div class="hand-row">';
-    for (const t of s.hand) html += makeTileEl(t, "mini").outerHTML;
+    for (const t of s.hand) html += makeTileEl(t, "sm").outerHTML;
     html += "</div>";
-    html += `<div class="opt-row">你打: ${makeTileEl(s.actual, "mini").outerHTML} &nbsp; AI推荐: ${makeTileEl(s.recommended, "mini").outerHTML}</div>`;
+    html += `<div class="opt-row">你打: ${makeTileEl(s.actual, "sm").outerHTML} &nbsp; AI推荐: ${makeTileEl(s.recommended, "sm").outerHTML}</div>`;
     if (s.options && s.options.length) {
       const optText = s.options.map(o => `${o.name}(风险${Math.round(o.gang_risk * 100)}%)`).join(" ");
       html += `<div class="opt-row">候选: ${optText}</div>`;
@@ -509,9 +566,22 @@ async function loadReview() {
 
 // ---------- 启动 ----------
 document.getElementById("btn-new").onclick = newGame;
+document.getElementById("btn-again").onclick = newGame;
+document.getElementById("btn-peng").onclick = doPeng;
+document.getElementById("btn-gang").onclick = doGang;
+document.getElementById("btn-pass").onclick = doPass;
 document.getElementById("btn-sort").onclick = sortHand;
-document.getElementById("btn-analysis").onclick = () => { toggleAnalysis(); refreshAnalysis(); };
-document.getElementById("btn-review").onclick = () => { toggleReview(); loadReview(); };
-const againBtn = document.getElementById("btn-again");
-if (againBtn) againBtn.onclick = newGame;
+document.getElementById("btn-analysis").onclick = () => {
+  document.getElementById("analysis-panel").classList.toggle("hidden");
+  refreshAnalysis();
+};
+document.getElementById("btn-review").onclick = () => {
+  document.getElementById("review-panel").classList.toggle("hidden");
+  loadReview();
+};
+document.getElementById("close-analysis").onclick = () =>
+  document.getElementById("analysis-panel").classList.add("hidden");
+document.getElementById("close-review").onclick = () =>
+  document.getElementById("review-panel").classList.add("hidden");
+
 newGame();

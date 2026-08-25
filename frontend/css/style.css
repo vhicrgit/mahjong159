@@ -57,36 +57,20 @@ body {
   width: 44px; height: 60px; border-radius: 5px;
   background: linear-gradient(180deg, #fffef5 0%, #f5f0dc 100%);
   border: 1px solid #c9b896; box-shadow: 0 2px 4px rgba(0,0,0,.4);
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  font-weight: bold; cursor: default; user-select: none;
+  display: flex; justify-content: center; align-items: center;
+  cursor: default; user-select: none;
   position: relative;
 }
-.tile .t-num { font-size: 20px; line-height: 1.1; }
-.tile .t-suit { font-size: 12px; line-height: 1.1; }
-.tile.suit-0 { color: #1b7a43; }  /* 条: 绿 */
-.tile.suit-1 { color: #1d5fa8; }  /* 饼: 蓝 */
-.tile.suit-2 { color: #b3242a; }  /* 万: 红 */
-.tile.hz { color: #b3242a; font-size: 26px; justify-content: center; }
-.tile.hz .t-num { font-size: 26px; }
+.tile svg { width: 88%; height: 88%; display: block; pointer-events: none; }
+.meld { display: flex; gap: 1px; }
 
 .tile.back {
   background: linear-gradient(180deg, #0f3460 0%, #16213e 100%);
   border-color: #0a2540;
 }
-.tile.back::after {
-  content: ""; position: absolute; inset: 5px;
-  border: 1px solid rgba(255,255,255,.15); border-radius: 3px;
-}
 
 .tile.small { width: 30px; height: 40px; }
-.tile.small .t-num { font-size: 14px; }
-.tile.small .t-suit { font-size: 9px; }
-.tile.small.hz .t-num { font-size: 18px; }
-
 .tile.mini { width: 22px; height: 30px; }
-.tile.mini .t-num { font-size: 11px; }
-.tile.mini .t-suit { font-size: 8px; }
-.tile.mini.hz .t-num { font-size: 13px; }
 
 /* 我的手牌 */
 #my-area { padding: 8px 20px 20px; }
@@ -209,3 +193,35 @@ body {
 .discard-suggest .info { flex: 1; font-size: 12px; line-height: 1.5; }
 
 .hidden { display: none !important; }
+
+/* 最新弃牌高亮 */
+.tile.latest { outline: 2px solid #e94560; box-shadow: 0 0 8px rgba(233,69,96,.8); }
+
+/* 刚摸的牌高亮 */
+#my-hand .tile.drawn { outline: 2px solid #ffd166; box-shadow: 0 0 8px rgba(255,209,102,.7); }
+
+/* 拖拽中 */
+#my-hand .tile.dragging { opacity: .85; cursor: grabbing; }
+
+/* 出牌飞入动画(按方位) */
+@keyframes flyInTop { from { transform: translateY(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes flyInBottom { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes flyInLeft { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes flyInRight { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.tile.fly-top { animation: flyInTop .3s ease-out; }
+.tile.fly-bottom { animation: flyInBottom .3s ease-out; }
+.tile.fly-left { animation: flyInLeft .3s ease-out; }
+.tile.fly-right { animation: flyInRight .3s ease-out; }
+
+/* 累计积分条 */
+#score-bar { font-size: 12px; color: #a8dadc; margin-right: 10px; }
+#score-bar .reset-score { color: #e94560; cursor: pointer; margin-left: 6px; text-decoration: underline; }
+
+/* 状态栏辅助文字 */
+.hint-dim { color: rgba(255,255,255,.45); font-size: 12px; margin-left: 8px; }
+.hl-tile { color: #ffd166; font-size: 16px; }
+
+/* 听牌提示 */
+#ting-hint { text-align: center; font-size: 13px; padding: 2px 0 4px; min-height: 20px; }
+#ting-hint .ting-ok { color: #6ce5a3; font-weight: bold; }
+#ting-hint .ting-no { color: rgba(255,255,255,.4); }

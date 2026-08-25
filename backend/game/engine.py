@@ -56,6 +56,8 @@ class Game:
         self.huangzhuang = False
         self.gang_records: list[dict] = []  # 杠分结算记录
         self.log: list[str] = []
+        self.last_drawn: dict | None = None  # {"seat", "tile"} 刚摸的牌
+        self.last_action: str = ""           # 最近动作描述
         self._deal()
 
     # ---------- 初始化 ----------
@@ -93,6 +95,8 @@ class Game:
         p.discards.append(tile)
         self.last_discard = tile
         self.last_discarder = seat
+        self.last_drawn = None  # 出牌后清除摸牌标记
+        self.last_action = f"座位{seat} 打出 {tile_name(tile)}"
         self.log.append(f"座位{seat} 打出 {tile_name(tile)}")
 
         # 检查其他家碰/杠(不能吃, 不能点炮胡, 红中不能被碰杠)
@@ -208,6 +212,8 @@ class Game:
         tile = self.wall.pop()  # 从尾部补牌
         self.players[seat].hand.append(tile)
         self.players[seat].hand.sort()
+        self.last_drawn = {"seat": seat, "tile": tile}
+        self.last_action = f"座位{seat} 杠后补牌"
         self.log.append(f"座位{seat} 杠后补牌 {tile_name(tile)}")
         # 检查杠上花
         counts = self.players[seat].hand_counts
@@ -226,6 +232,8 @@ class Game:
         p = self.players[self.turn]
         p.hand.append(tile)
         p.hand.sort()
+        self.last_drawn = {"seat": self.turn, "tile": tile}
+        self.last_action = f"座位{self.turn} 摸牌"
         self.log.append(f"座位{self.turn} 摸牌 {tile_name(tile)}")
         # 检查自摸
         counts = p.hand_counts
@@ -322,6 +330,8 @@ class Game:
             "n_159": self.n_159,
             "huangzhuang": self.huangzhuang,
             "gang_records": self.gang_records,
+            "last_drawn": self.last_drawn,
+            "last_action": self.last_action,
             "gang_options": (self._gang_options(self.turn)
                              if self.phase == "discard_wait" else []),
             "log": self.log[-30:],

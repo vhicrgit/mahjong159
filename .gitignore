@@ -9,3 +9,9 @@ __pycache__/
 dist/
 build/
 *.bak
+.gradle/
+local.properties
+android/build/
+android/app/build/
+**/build/
+*.apk
