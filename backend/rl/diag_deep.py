@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import numpy as np
 import torch
 from backend.game.engine import Game
-from backend.ai.bot import Bot
+from backend.ai.bot_v1 import Bot
 from backend.rl.model import build_model, legal_discard_mask
 from backend.rl.features import encode_state
 from backend.rl.net_bot import NetBot

@@ -9,7 +9,7 @@ import torch
 
 from ..rl.features_v2 import encode_state
 from ..rl.model import build_model, legal_discard_mask
-from ..ai.bot import Bot
+from ..ai.bot_v1 import Bot
 
 
 class NetBot(Bot):

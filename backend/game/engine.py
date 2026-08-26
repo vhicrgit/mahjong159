@@ -134,7 +134,7 @@ class Game:
         assert p.hand.count(tile) >= 2
         p.hand.remove(tile)
         p.hand.remove(tile)
-        p.melds.append({"type": "peng", "tile": tile})
+        p.melds.append({"type": "peng", "tile": tile, "wr": len(self.wall)})
         # 弃牌堆中移除被碰的牌(标记)
         if self.players[self.last_discarder].discards and \
            self.players[self.last_discarder].discards[-1] == tile:
@@ -159,7 +159,8 @@ class Game:
             assert p.hand.count(t) >= 3
             for _ in range(3):
                 p.hand.remove(t)
-            p.melds.append({"type": "gang", "tile": t, "kind": "ming"})
+            p.melds.append({"type": "gang", "tile": t, "kind": "ming",
+                            "wr": len(self.wall)})
             if self.players[self.last_discarder].discards and \
                self.players[self.last_discarder].discards[-1] == t:
                 self.players[self.last_discarder].discards.pop()
@@ -175,7 +176,8 @@ class Game:
                 # 暗杠
                 for _ in range(4):
                     p.hand.remove(t)
-                p.melds.append({"type": "gang", "tile": t, "kind": "an"})
+                p.melds.append({"type": "gang", "tile": t, "kind": "an",
+                                "wr": len(self.wall)})
                 self.gang_records.append({"seat": seat, "kind": "an", "tile": t})
                 self.log.append(f"座位{seat} 暗杠 {tile_name(t)}")
             elif p.hand.count(t) == 1 and any(

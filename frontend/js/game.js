@@ -77,7 +77,10 @@ async function newGame() {
   uidCounter = 1;
   document.getElementById("result-overlay").classList.add("hidden");
   document.getElementById("review-panel").classList.add("hidden");
-  state = await api("new_game", { dealer: 0 });
+  // 空值表示使用后端默认阵容(菜鸟/老鸟/挂哥 分坐三席), 不要回退成单一档位
+  const botKind = document.getElementById("bot-kind")?.value || null;
+  const botParam = Number(document.getElementById("bot-param")?.value || 0);
+  state = await api("new_game", { dealer: 0, bot_kind: botKind, bot_param: botParam });
   render();
   refreshAnalysis();
 }

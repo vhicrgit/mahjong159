@@ -59,11 +59,11 @@ def compute_grp_gae(records, grp_vals, scores, gamma=1.0, lam=0.95):
 
 
 @torch.no_grad()
-def evaluate_vec(model, device, n_games=1000, seed0=900000):
+def evaluate_vec(model, device, n_games=1000, seed0=900000, feat_version=2):
     """向量化评估: 模型座位0 vs 3规则Bot, 贪心出牌"""
     model.eval()
     engine = VectorizedSelfPlay(model, n_games, device, seed0=seed0,
-                                model_seats=[0])
+                                model_seats=[0], feat_version=feat_version)
     results = engine.run(temperature=0.0)
     wins = sum(1 for r in results if r["winner"] == 0)
     avg = float(np.mean([r["scores"][0] for r in results]))

@@ -14,15 +14,15 @@ import torch
 
 
 def _eval_worker(args):
-    (model_sd, size, n_games, seed0) = args
+    (model_sd, size, n_games, seed0, feat_dim, feat_version) = args
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     from .model import build_model
     from .vec_selfplay import VectorizedSelfPlay
-    model = build_model(size).to(device)
+    model = build_model(size, feat_dim=feat_dim).to(device)
     model.load_state_dict(model_sd)
     model.eval()
     engine = VectorizedSelfPlay(model, n_games, device, seed0=seed0,
-                                model_seats=[0])
+                                model_seats=[0], feat_version=feat_version)
     results = engine.run(temperature=0.0)
     wins = sum(1 for r in results if r["winner"] == 0)
     scores = [r["scores"][0] for r in results]
@@ -33,9 +33,13 @@ def evaluate_parallel(model_path: str, games: int = 4000, procs: int = 8):
     ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
     model_sd = ckpt["model"] if "model" in ckpt else ckpt
     size = ckpt.get("size", "base")
+    feat_dim = ckpt.get("feat_dim", model_sd["input_proj.weight"].shape[1])
+    feat_version = ckpt.get("feat_version",
+                            {810: 3, 1146: 4}.get(feat_dim, 2))
 
     per = games // procs
-    tasks = [(model_sd, size, per, 300000 + w * per) for w in range(procs)]
+    tasks = [(model_sd, size, per, 300000 + w * per, feat_dim, feat_version)
+             for w in range(procs)]
 
     ctx = mp.get_context("spawn")
     with ctx.Pool(procs) as pool:

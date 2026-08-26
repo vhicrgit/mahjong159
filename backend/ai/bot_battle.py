@@ -15,9 +15,26 @@ from .bot_v2 import Bot as BotV2
 from .bot_v3 import Bot as BotV3
 
 
+def _bot_class(name):
+    if name == "v2":
+        return BotV2
+    if name == "v3":
+        return BotV3
+    if name == "v10":
+        from .bot_v10 import Bot as B
+        return B
+    if name == "v31":
+        from .bot_v31 import Bot as B
+        return B
+    if name == "target":
+        from .bot_target import Bot as B
+        return B
+    raise ValueError(name)
+
+
 def play_one(args):
     seed, v2_seats, v2_bot = args
-    B2 = {'v2': BotV2, 'v3': BotV3}[v2_bot]
+    B2 = _bot_class(v2_bot)
     g = Game(seed=seed, human_seat=-1)
     bots = {i: (B2(g, i) if i in v2_seats else BotV1(g, i))
             for i in range(4)}
@@ -47,7 +64,7 @@ def main():
     ap.add_argument("--v2-seats", type=str, default="0,1",
                     help="v2 占据的座位, 逗号分隔; 2v2 消除座位偏差")
     ap.add_argument("--bot", type=str, default="v2",
-                    choices=["v2", "v3"])
+                    choices=["v2", "v3", "v10", "v31", "target"])
     args = ap.parse_args()
 
     v2_seats = {int(x) for x in args.v2_seats.split(",")}

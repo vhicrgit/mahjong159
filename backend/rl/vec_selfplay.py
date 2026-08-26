@@ -13,10 +13,20 @@ import numpy as np
 import torch
 
 from ..game.engine import Game
-from ..ai.bot import Bot
+from ..ai.bot_v1 import Bot
 from ..rules.ting import discard_options
 from .features_v2 import encode_state
 from .model import legal_discard_mask
+
+
+def _get_encoder(feat_version: int):
+    if feat_version == 4:
+        from .features_og import encode_state_blind as enc
+        return enc
+    if feat_version == 3:
+        from .features_v3 import encode_state as enc
+        return enc
+    return encode_state
 
 
 def _rule_score(game, seat, tile: int) -> float:
@@ -59,13 +69,14 @@ def _rule_score(game, seat, tile: int) -> float:
 class VectorizedSelfPlay:
     def __init__(self, model, n_games: int, device, seed0: int = 0,
                  model_seats: list[int] | None = None, grp_model=None,
-                 grp_version: int = 2):
+                 grp_version: int = 2, feat_version: int = 2):
         self.model = model
         self.device = device
         self.n_games = n_games
         self.model_seats = model_seats or [0, 1, 2, 3]
         self.grp_model = grp_model
         self.grp_version = grp_version
+        self.encode = _get_encoder(feat_version)
         self.games = [Game(seed=seed0 + i, human_seat=-1)
                       for i in range(n_games)]
         self.bots = [{s: Bot(g, s) for s in range(4)}
@@ -92,7 +103,7 @@ class VectorizedSelfPlay:
 
         # 模型批量推理
         if model_idxs:
-            feats = np.stack([encode_state(self.games[i], self.games[i].turn)
+            feats = np.stack([self.encode(self.games[i], self.games[i].turn)
                               for i in model_idxs])
             masks = torch.stack([legal_discard_mask(
                 self.games[i].players[self.games[i].turn].hand_counts)

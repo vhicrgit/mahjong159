@@ -1,0 +1,89 @@
+"""Rule bot v18: v10 closed-hand play plus open-aware post-meld play."""
+
+from .bot_v10 import Bot as BotV10
+from .bot_v8 import open_shanten, _waiting_tiles_open, _useful_draws_open
+from ..rules.win import shanten
+
+RED = 27
+
+
+class Bot(BotV10):
+    def _open_ukeire(self, counts, exposed):
+        if open_shanten(counts, exposed) == 0:
+            useful = _waiting_tiles_open(tuple(counts), exposed)
+        else:
+            useful = _useful_draws_open(tuple(counts), exposed)
+        unseen = self._unseen_counts()
+        return sum(unseen[t] for t in useful)
+
+    def _choose_open_discard(self) -> int:
+        p = self.game.players[self.seat]
+        counts14 = tuple(p.hand_counts)
+        visible = self._visible_counts()
+        unseen = tuple(max(0, 4 - visible[t]) for t in range(28))
+        exposed = len(p.melds)
+        penged = self._penged_by_others()
+        eg = self._endgame_factor()
+        sh_w = self.shanten_weight * (1.0 - 0.5 * eg)
+        risk_w = self.risk_weight * (1.0 + 1.5 * eg)
+        best_t, best_score = None, -1e18
+        for t, cnt in enumerate(counts14):
+            if cnt <= 0:
+                continue
+            h = list(counts14)
+            h[t] -= 1
+            s = open_shanten(h, exposed)
+            if s == 0:
+                useful = _waiting_tiles_open(tuple(h), exposed)
+            else:
+                useful = _useful_draws_open(tuple(h), exposed)
+            u = sum(unseen[x] for x in useful)
+            risk = 0.0
+            if t != RED:
+                if t in penged:
+                    risk = 1.0
+                else:
+                    risk = {3: 0.4, 2: 0.2, 1: 0.05, 0: 0.0}.get(unseen[t], 0.4)
+            score = -sh_w * s + self.ukeire_weight * u - risk_w * risk
+            if score > best_score:
+                best_score, best_t = score, t
+        return best_t if best_t is not None else p.hand[-1]
+
+    def choose_discard(self) -> int:
+        if self.game.players[self.seat].melds:
+            return self._choose_open_discard()
+        return super().choose_discard()
+
+    def decide_peng(self, tile: int) -> bool:
+        p = self.game.players[self.seat]
+        exposed = len(p.melds)
+        before = shanten(p.hand_counts) if exposed == 0 else open_shanten(p.hand_counts, exposed)
+        c = list(p.hand_counts)
+        c[tile] -= 2
+        best_after, best_u = 99, 0
+        for discard, cnt in enumerate(c):
+            if cnt <= 0:
+                continue
+            c[discard] -= 1
+            after = open_shanten(c, exposed + 1)
+            u = self._open_ukeire(tuple(c), exposed + 1)
+            if after < best_after or (after == best_after and u > best_u):
+                best_after, best_u = after, u
+            c[discard] += 1
+        return best_after < before
+
+    def decide_gang(self, tile: int, kind: str) -> bool:
+        p = self.game.players[self.seat]
+        exposed = len(p.melds)
+        before = shanten(p.hand_counts) if exposed == 0 else open_shanten(p.hand_counts, exposed)
+        c = list(p.hand_counts)
+        if kind == "ming":
+            c[tile] -= 3
+            exposed += 1
+        elif kind == "an":
+            c[tile] -= 4
+            exposed += 1
+        else:
+            c[tile] -= 1
+        after = open_shanten(c, exposed)
+        return not (before == 0 and after > 0)

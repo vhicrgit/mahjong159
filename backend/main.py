@@ -37,6 +37,55 @@ def current_game() -> Game:
     return g
 
 
+def _make_ai_bot(g: Game, seat: int):
+    """按档位名构造单个 Bot(三席统一档位时使用)"""
+    kind = _session.get("bot_kind") or os.environ.get("MAHJONG_BOT", "v31")
+    param = int(_session.get("bot_param")
+                or os.environ.get("MAHJONG_BOT_PARAM", "0"))
+    if kind in ("v31", "normal"):
+        return Bot(g, seat)
+    if kind == "v10":
+        from .ai.bot_v10 import Bot as B
+        return B(g, seat)
+    if kind == "v1":
+        from .ai.bot_v1 import Bot as B
+        return B(g, seat)
+    if kind == "target":
+        from .ai.bot_target import Bot as B
+        return B(g, seat)
+    if kind == "cheat_wall":
+        from .ai.bot_cheat import Bot as B
+        return B(g, seat, wall_lookahead=param or 32,
+                 see_opponents=False, beam=12, rollout=False)
+    if kind == "cheat_opp":
+        from .ai.bot_cheat import Bot as B
+        return B(g, seat, wall_lookahead=param or 32,
+                 see_opponents=True, beam=12, rollout=False)
+    if kind == "cheat_full":
+        from .ai.bot_cheat import Bot as B
+        return B(g, seat, wall_lookahead=-1, see_opponents=True,
+                 beam=param or 4, rollout=True)
+    return Bot(g, seat)
+
+
+def _gang_kind(g: Game, seat: int, tile: int) -> str:
+    if g.players[seat].hand.count(tile) == 4:
+        return "an"
+    return "bu"
+
+
+def _build_ai_bots(g: Game) -> dict:
+    """构建 AI 阵容
+
+    默认走 roster 固定阵容(三席强度不同: 菜鸟v1 / 老鸟v4 / 挂哥oracle),
+    与手机版保持一致。若显式指定了档位(会话参数 bot_kind 或环境变量
+    MAHJONG_BOT), 则三席统一使用该档位, 便于横向评测单一 Bot 强度。
+    """
+    if not (_session.get("bot_kind") or os.environ.get("MAHJONG_BOT")):
+        return roster.build_bots(g, g.human_seat)
+    return {i: _make_ai_bot(g, i) for i in range(4) if i != g.human_seat}
+
+
 def state_with_names(g: Game) -> dict:
     """公开状态 + 每个座位的 AI 名字/说明(供前端显示对手身份)"""
     st = g.public_state(0)
@@ -79,13 +128,21 @@ def _record_decision(g: Game, actual_tile: int):
 
 def run_bots_until_human(g: Game):
     """自动推进 AI 回合, 直到轮到人类或游戏结束"""
-    bots = roster.build_bots(g, g.human_seat)
+    bots = _build_ai_bots(g)
     guard = 0
     while g.phase != "game_over" and guard < 300:
         guard += 1
         if g.phase == "discard_wait":
             if g.turn == g.human_seat:
                 break
+            gang_taken = False
+            for tile in g._gang_options(g.turn):
+                if bots[g.turn].decide_gang(tile, _gang_kind(g, g.turn, tile)):
+                    r = g.action_gang(g.turn, tile)
+                    gang_taken = True
+                    break
+            if gang_taken:
+                continue
             r = g.action_discard(g.turn, bots[g.turn].choose_discard())
         elif g.phase == "react_wait":
             # 人类优先响应
@@ -107,6 +164,8 @@ def run_bots_until_human(g: Game):
 
 class NewGameReq(BaseModel):
     dealer: int = 0
+    bot_kind: str | None = None
+    bot_param: int | None = None
 
 
 class DiscardReq(BaseModel):
@@ -122,6 +181,11 @@ def new_game(req: NewGameReq | None = None):
     g = Game(human_seat=0)
     if req:
         g.dealer = req.dealer
+        _session["bot_kind"] = req.bot_kind
+        _session["bot_param"] = req.bot_param
+    else:
+        _session["bot_kind"] = None
+        _session["bot_param"] = None
     _session["game"] = g
     _session["review_log"] = []
     # 若庄家不是人类, 先推进

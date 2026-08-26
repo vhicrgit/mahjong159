@@ -20,6 +20,16 @@ from ..ai.bot_v1 import Bot as V1
 from .features_v2 import encode_state
 
 
+def _get_encoder():
+    """FEAT=og → 盲打v3+oracle块(1146维, 渐进Oracle Guiding用); 默认 v2(628)"""
+    import os
+    if os.environ.get("FEAT") == "og":
+        from .features_og import encode_state as enc, FEAT_DIM
+        return enc, FEAT_DIM
+    from .features_v2 import FEAT_DIM
+    return encode_state, FEAT_DIM
+
+
 def _make_learner(g, seat):
     """teacher 由环境变量 TEACHER 选择:
        oracle = 完美信息(读牌墙)决策做标签, NN 只看盲打特征 → Oracle Guiding
@@ -35,7 +45,8 @@ def _make_learner(g, seat):
 
 
 def play_one(seed: int):
-    """座位0=v4搜索, 1-3=v1; 只记录座位0的出牌决策"""
+    """座位0=teacher, 1-3=v1; 只记录座位0的出牌决策"""
+    enc, feat_dim = _get_encoder()
     g = Game(seed=seed, human_seat=-1)
     learner = _make_learner(g, 0)
     bots = {0: learner, 1: V1(g, 1), 2: V1(g, 2), 3: V1(g, 3)}
@@ -47,7 +58,7 @@ def play_one(seed: int):
         if g.phase == "discard_wait":
             seat = g.turn
             if seat == 0:
-                feat = encode_state(g, 0)
+                feat = enc(g, 0)
                 tile = learner.choose_discard()
                 records.append((feat, tile))
                 g.action_discard(0, tile)
@@ -68,7 +79,7 @@ def play_one(seed: int):
     ret0 = float(g.players[0].score_delta)
     n = len(records)
     feats = np.stack([r[0] for r in records]).astype(np.float32) \
-        if records else np.zeros((0, 628), dtype=np.float32)
+        if records else np.zeros((0, feat_dim), dtype=np.float32)
     seats = np.zeros(n, dtype=np.int64)
     acts = np.array([r[1] for r in records], dtype=np.int64)
     rets = np.full(n, ret0, dtype=np.float32)

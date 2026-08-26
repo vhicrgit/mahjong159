@@ -19,6 +19,12 @@ body {
 }
 #topbar .title { font-size: 20px; font-weight: bold; color: #e94560; }
 .top-info { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+.bot-select-label { display: flex; align-items: center; gap: 6px; color: #a8dadc; }
+#bot-kind, .bot-param {
+  background: #0f3460; color: #eee; border: 1px solid #1a4a7a;
+  border-radius: 6px; padding: 6px 8px; font-size: 13px;
+}
+.bot-param { width: 64px; }
 
 .btn {
   padding: 8px 18px; border: none; border-radius: 6px; cursor: pointer;
