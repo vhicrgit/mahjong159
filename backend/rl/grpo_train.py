@@ -33,6 +33,7 @@ from ..ai.bot_v1 import Bot as BotV1
 from ..ai.bot_v10 import Bot as BotV10
 from ..rules.ting import discard_options
 from .model import build_model, N_ACTIONS
+from .gen_offline import _shaped_scores
 from .world_grpo import sample_world, rollout_candidate, _v10_scores
 
 
@@ -127,6 +128,38 @@ class GRPOTrainer:
         logits = logits.masked_fill(~m, -1e9)
         return torch.softmax(logits.float(), dim=-1).cpu().numpy()
 
+    def _rollout_nn(self, snaps, cand_lists):
+        """NN 自对弈推演: 所有 (候选, 世界) 注入成 Game, 单批次向量化跑完。
+        共享世界: 同一局面的候选复用同一组 (hands, wall)。"""
+        games, meta = [], []
+        for si, (snap, seat) in enumerate(snaps):
+            rng = random.Random(self.args.seed0 + 991 + si)
+            worlds = [sample_world(snap, rng, hero_seat=seat)
+                      for _ in range(self.args.worlds)]
+            for tile in cand_lists[si]:
+                for hands, wall in worlds:
+                    g = copy.deepcopy(snap)
+                    for s2, h in hands.items():
+                        g.players[s2].hand = list(h)
+                    g.wall = list(wall)
+                    g.action_discard(seat, tile)
+                    games.append(g)
+                    meta.append((si, tile, seat))
+        from .vec_selfplay import VectorizedSelfPlay
+        eng = VectorizedSelfPlay(self.model, len(games), self.device,
+                                 games=games, model_seats=[0, 1, 2, 3],
+                                 feat_version=self.args.feat_version,
+                                 record=False)
+        eng.run(temperature=0.0)
+        r_map = {}
+        buf = {}
+        for (si, tile, seat), g in zip(meta, eng.games):
+            r = float(_shaped_scores(g, self.args.step_penalty)[seat])
+            buf.setdefault(si, {}).setdefault(tile, []).append(r)
+        for si, d in buf.items():
+            r_map[si] = {t: float(np.mean(v)) for t, v in d.items()}
+        return r_map
+
     def run(self):
         args = self.args
         log_f = open(args.log, "a", buffering=1)
@@ -171,12 +204,19 @@ class GRPOTrainer:
                                   args.seed0 + it * 7919 + si, args.worlds,
                                   args.step_penalty))
                     meta.append((si, tile))
-            with mp.Pool(args.procs) as pool:
-                rets = pool.map(_rollout_worker, tasks, chunksize=1)
-            # 4) 组内优势 + 策略梯度
-            r_map = {}
-            for (si, tile), r in zip(meta, rets):
-                r_map.setdefault(si, {})[tile] = r
+            if args.rollout == "nn":
+                cand_lists = {}
+                for (si, tile) in meta:
+                    cand_lists.setdefault(si, []).append(tile)
+                cand_lists = [cand_lists[si] for si in range(len(snaps))]
+                self.model.eval()
+                r_map = self._rollout_nn(snaps, cand_lists)
+            else:
+                with mp.Pool(args.procs) as pool:
+                    rets = pool.map(_rollout_worker, tasks, chunksize=1)
+                r_map = {}
+                for (si, tile), r in zip(meta, rets):
+                    r_map.setdefault(si, {})[tile] = r
             A_list, feat_rows, act_rows = [], [], []
             spreads = []
             for si, tile_r in r_map.items():
@@ -259,6 +299,8 @@ def main():
     ap.add_argument("--adv-clip", type=float, default=3.0)
     ap.add_argument("--inner-epochs", type=int, default=2)
     ap.add_argument("--feat-version", type=int, default=3, choices=[2,3])
+    ap.add_argument("--rollout", type=str, default="v1", choices=["v1", "nn"],
+                    help="推演策略: v1规则(快,有风格偏差) 或 nn当前策略(自洽)")
     ap.add_argument("--step-penalty", type=float, default=0.02)
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=400)

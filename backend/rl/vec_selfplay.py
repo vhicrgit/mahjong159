@@ -69,18 +69,25 @@ def _rule_score(game, seat, tile: int) -> float:
 class VectorizedSelfPlay:
     def __init__(self, model, n_games: int, device, seed0: int = 0,
                  model_seats: list[int] | None = None, grp_model=None,
-                 grp_version: int = 2, feat_version: int = 2):
+                 grp_version: int = 2, feat_version: int = 2,
+                 games: list | None = None, record: bool = True):
         self.model = model
         self.device = device
+        self.encode = _get_encoder(feat_version)
+        if games is not None:
+            # 预制局面模式(GRPO世界推演): 直接使用注入好的 Game 列表
+            self.games = games
+            n_games = len(games)
+        else:
+            self.games = [Game(seed=seed0 + i, human_seat=-1)
+                          for i in range(n_games)]
         self.n_games = n_games
         self.model_seats = model_seats or [0, 1, 2, 3]
         self.grp_model = grp_model
         self.grp_version = grp_version
-        self.encode = _get_encoder(feat_version)
-        self.games = [Game(seed=seed0 + i, human_seat=-1)
-                      for i in range(n_games)]
         self.bots = [{s: Bot(g, s) for s in range(4)}
                      for g in self.games]
+        self.record = record
         self.records: list[list] = [[] for _ in range(n_games)]
         # 与 records 平行的 GRP 预测值 (决策玩家自己的预期最终得分)
         self.grp_vals: list[list] = [[] for _ in range(n_games)]
@@ -168,6 +175,9 @@ class VectorizedSelfPlay:
                 g = self.games[i]
                 seat = g.turn
                 tile = int(actions_cpu[j])
+                if not self.record:
+                    g.action_discard(seat, tile)
+                    continue
                 # 计算规则Bot评分 (regret = best - chosen)
                 hand = g.players[seat].hand_counts
                 chosen_score = _rule_score(g, seat, tile)
