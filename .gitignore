@@ -9,3 +9,22 @@ __pycache__/
 dist/
 build/
 *.bak
+.gradle/
+local.properties
+android/build/
+android/app/build/
+**/build/
+*.apk
+
+# IDE
+.qoder/
+
+# 本地临时脚本与调试产物(不入库)
+# 约定: 以下划线开头的文件均为一次性探测/验证脚本与截图
+# (正式代码均在 js/ css/ backend/ 等子目录下, 不会被误包含)
+_*.js
+_*.json
+_*.html
+_*.txt
+_*.png
+_*.jpg

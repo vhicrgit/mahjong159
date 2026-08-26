@@ -5,10 +5,17 @@
 - 碰: 碰后向听数降低才碰
 - 杠: 能杠则杠(杠分净收益为正), 但手握听牌时谨慎补杠破坏听口
 - 目标: 快速自摸, 不防守过度(159玩法无点炮, 防守压力小)
+
+[口径变更] 原本 decide_peng/decide_gang 直接对副露后的 11/10 张暗牌调
+shanten(), 而 shanten 的公式 8-2m-t-p 硬编码了 13 张手牌凑 4 面子, 导致
+向听被高估约 2*副露数, "碰后向听降低"几乎永远不成立 —— 实测表现为
+规则Bot 从不鸣牌。现已改用 shanten_with_melds 修正。
+注意: 本文件曾作为全项目评测基线("1个测试Bot@座位0 + 3×v1"),
+修复后基线强度已变强, docs/ceiling_and_bots.md 中旧数值不再与新测量同口径。
 """
 
 from ..rules.tiles import counts_from_tiles, tile_short
-from ..rules.win import shanten
+from ..rules.win import shanten, shanten_with_melds
 from ..rules.ting import discard_options, waiting_tiles
 
 RED = 27
@@ -61,31 +68,40 @@ class Bot:
         return best_tile
 
     def decide_peng(self, tile: int) -> bool:
-        """是否碰: 碰后向听数降低才碰"""
+        """是否碰: 碰后向听数降低才碰(副露感知)"""
         p = self.game.players[self.seat]
-        counts = p.hand_counts
-        before = shanten(counts)
-        # 模拟碰: 手牌减2张(碰出后手牌-2, 副露+1)
-        c2 = list(counts)
-        c2[tile] -= 2
-        after = shanten(c2)
+        n_melds = len(p.melds)
+        counts = list(p.hand_counts)
+        before = shanten_with_melds(counts, n_melds)
+        # 碰后: 暗牌-2, 副露+1, 且必须再打出一张
+        c11 = list(counts)
+        c11[tile] -= 2
+        after = 99
+        for d, cnt in enumerate(c11):
+            if cnt <= 0:
+                continue
+            c10 = list(c11)
+            c10[d] -= 1
+            after = min(after, shanten_with_melds(c10, n_melds + 1))
         return after < before
 
     def decide_gang(self, tile: int, kind: str) -> bool:
-        """是否杠: 杠分净收益为正, 一般杠; 但若杠会破坏听牌且进张很宽, 谨慎"""
+        """是否杠: 杠分净收益为正, 一般杠; 但若杠会破坏听牌则不杠(副露感知)"""
         p = self.game.players[self.seat]
-        counts = p.hand_counts
-        s_before = shanten(counts)
+        n_melds = len(p.melds)
+        counts = list(p.hand_counts)
+        s_before = shanten_with_melds(counts, n_melds)
+        c2 = list(counts)
         if kind == "ming":
-            c2 = list(counts)
             c2[tile] -= 3
+            n_after = n_melds + 1
         elif kind == "an":
-            c2 = list(counts)
             c2[tile] -= 4
-        else:  # bu
-            c2 = list(counts)
+            n_after = n_melds + 1
+        else:  # bu: 碰转杠, 副露数不变
             c2[tile] -= 1
-        s_after = shanten(c2)
+            n_after = n_melds
+        s_after = shanten_with_melds(c2, n_after)
         # 杠后向听数不变差才杠(听牌状态下不破坏听口)
         if s_before == 0 and s_after > 0:
             return False

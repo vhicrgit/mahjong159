@@ -9,13 +9,26 @@
 所有计算为确定性算法 + 简单统计, CPU 毫秒级。
 """
 
+import math
+
 from ..rules.tiles import TILE_COUNT, tile_suit, tile_rank, is_159, tile_short
-from ..rules.win import shanten_with_melds
+from ..rules.win import shanten_with_melds, is_win
 from ..rules.ting import waiting_tiles
 
 RED = 27
 TOTAL_PER_TILE = 4
 N_159_TOTAL = 36  # 1/5/9 x 3花色 x 4张
+
+
+def _r(x: float, nd: int) -> float:
+    """与 JS Math.round(x*10^nd)/10^nd 同语义的舍入(.5 向 +∞)。
+
+    Python 内置 round() 用银行家舍入(.5 向偶), 在 .05 边界上会与 JS 不一致
+    (实测: 分数 -141.75 -> Python -141.8 而 JS -141.7)。分析器需跟 JS 版
+    逐位一致, 因此统一用此函数。
+    """
+    m = 10 ** nd
+    return math.floor(x * m + 0.5) / m
 
 
 class Analyzer:
@@ -76,7 +89,7 @@ class Analyzer:
         # 牌局越后期, 别人成刻概率越高, 风险上调
         progress = 1 - self.game.wall_remaining() / 60.0
         progress = max(0.0, min(1.0, progress))
-        return round(base * (0.7 + 0.3 * progress), 3)
+        return _r(base * (0.7 + 0.3 * progress), 3)
 
     # ---------- 159 收益预估 ----------
     def expected_fan159(self) -> float:
@@ -97,11 +110,11 @@ class Analyzer:
         if unknown_total <= 0:
             return 0.0
         k_est = unseen_159 * wall_n / unknown_total
-        return round(6.0 * k_est / wall_n, 2)
+        return _r(6.0 * k_est / wall_n, 2)
 
     def expected_score_if_win(self) -> float:
         """当前胡牌的期望收益 = (E[n]+1) * 3 家"""
-        return round((self.expected_fan159() + 1) * 3, 2)
+        return _r((self.expected_fan159() + 1) * 3, 2)
 
     # ---------- 对手状态粗估 ----------
     def opponent_threat(self, opp_seat: int) -> dict:
@@ -118,7 +131,7 @@ class Analyzer:
         # 牌局进度基础分
         progress = 1 - self.game.wall_remaining() / 60.0
         score += 0.3 * max(0.0, progress)
-        return {"seat": opp_seat, "threat": round(min(score, 1.0), 2)}
+        return {"seat": opp_seat, "threat": _r(min(score, 1.0), 2)}
 
     # ---------- 主分析 ----------
     def analyze_hand(self) -> dict:
@@ -147,6 +160,27 @@ class Analyzer:
             result["wait_count"] = sum(rem[w] for w in waits)
         return result
 
+    def _effective_draws(self, counts, n_melds: int, s: int) -> list[int]:
+        """有效进张(广义进张): 听牌时=听口; 未听牌时=能降低向听的进张。
+
+        修复旧缺陷: 旧版 wait_remains 只在向听=0 时非零, 非听牌局面下所有候选
+        牌的进张项恒为 0, 打分退化成 "-100*向听 - 30*风险", 唯一区分依据变成
+        放杠风险。而风险按"外面还剩几张"估算: 持一对 -> 外面剩 2 张 -> 0.25;
+        单张 -> 外面剩 3 张 -> 0.55, 于是系统性地推荐"拆对子/打将"。
+        修法与 v10/v31 同口径: 任意向听下都计算有效进张。
+        """
+        out = []
+        for w in range(TILE_COUNT):
+            if counts[w] >= 4:
+                continue
+            counts[w] += 1
+            ok = is_win(counts) if s == 0 else \
+                shanten_with_melds(counts, n_melds) < s
+            counts[w] -= 1
+            if ok:
+                out.append(w)
+        return out
+
     def analyze_discards(self) -> list[dict]:
         """14张等价状态: 分析打出每张牌的后果, 给出综合建议排序。副露感知。"""
         p = self.game.players[self.seat]
@@ -160,12 +194,14 @@ class Analyzer:
             counts[t] -= 1
             s = shanten_with_melds(counts, n_melds)
             waits = waiting_tiles(counts) if s == 0 else []
+            draws = self._effective_draws(counts, n_melds, s)
             counts[t] += 1
             risk = self.gang_risk(t)
-            # 剩余进张(用未出现数估计, 更准确)
             wait_remains = sum(rem[w] for w in waits)
-            # 综合分: 向听数小优先, 进张多优先, 风险低优先
-            score = -100 * s + 3 * wait_remains - 30 * risk
+            ukeire = sum(rem[w] for w in draws)
+            # 综合分: 向听小优先 >> 有效进张多优先 > 风险低优先
+            # 风险权重从 30 降到 10: 避免风险项反过来压过牌效
+            score = -100 * s + 3 * ukeire - 10 * risk
             out.append({
                 "tile": t,
                 "name": tile_short(t),
@@ -173,8 +209,9 @@ class Analyzer:
                 "waits": [{"tile": w, "name": tile_short(w),
                            "remain": rem[w]} for w in waits],
                 "wait_remain": wait_remains,
+                "ukeire": ukeire,
                 "gang_risk": risk,
-                "score": round(score, 1),
+                "score": _r(score, 1),
             })
         out.sort(key=lambda x: -x["score"])
         return out

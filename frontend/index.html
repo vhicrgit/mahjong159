@@ -14,8 +14,10 @@
     <div class="top-info">
       <span id="wall-info">牌堆: -</span>
       <span id="dealer-info">庄家: -</span>
+      <button id="btn-sort" class="btn">整理牌</button>
       <label class="bot-select-label">AI:
         <select id="bot-kind">
+          <option value="">默认阵容(菜鸟/老鸟/挂哥)</option>
           <option value="v10">普通(v10)</option>
           <option value="target">目标概率</option>
           <option value="cheat_wall">看牌墙</option>
@@ -104,6 +106,8 @@
     <div id="analysis-content"></div>
   </aside>
 </div>
+<script src="/static/js/sound.js"></script>
+<script src="/static/js/tileRenderer.js"></script>
 <script src="/static/js/game.js"></script>
 </body>
 </html>

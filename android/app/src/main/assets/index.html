@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>安康159麻将</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 顶部栏 -->
+  <header id="topbar">
+    <div class="title">安康159</div>
+    <div class="top-info">
+      <span id="wall-info">-</span>
+      <button id="btn-analysis" class="hbtn">分析</button>
+      <button id="btn-review" class="hbtn">复盘</button>
+      <button id="btn-new" class="hbtn primary">新局</button>
+    </div>
+  </header>
+
+  <!-- 对手区(顶部横排, 紧凑布局) -->
+  <div id="opponents">
+    <div class="opp-box" id="opp-3">
+      <div class="opp-name"><span class="opp-pos">上家</span><span class="opp-nick"></span></div>
+      <div class="opp-count"></div>
+      <div class="opp-melds"></div>
+    </div>
+    <div class="opp-box" id="opp-2">
+      <div class="opp-name"><span class="opp-pos">对家</span><span class="opp-nick"></span></div>
+      <div class="opp-count"></div>
+      <div class="opp-melds"></div>
+    </div>
+    <div class="opp-box" id="opp-1">
+      <div class="opp-name"><span class="opp-pos">下家</span><span class="opp-nick"></span></div>
+      <div class="opp-count"></div>
+      <div class="opp-melds"></div>
+    </div>
+  </div>
+
+  <!-- 弃牌区 -->
+  <div id="discards-area">
+    <div class="discard-box" id="discard-3"><div class="dlabel">上家 挂哥</div><div class="discards"></div></div>
+    <div class="discard-box" id="discard-2"><div class="dlabel">对家 老鸟</div><div class="discards"></div></div>
+    <div class="discard-box" id="discard-1"><div class="dlabel">下家 菜鸟</div><div class="discards"></div></div>
+    <div class="discard-box" id="discard-0"><div class="dlabel">我</div><div class="discards"></div></div>
+  </div>
+
+  <!-- 状态提示 -->
+  <div id="status"></div>
+
+  <!-- 操作按钮 -->
+  <div id="actions" class="hidden">
+    <button id="btn-peng" class="abtn hidden">碰</button>
+    <button id="btn-gang" class="abtn hidden">杠</button>
+    <button id="btn-pass" class="abtn hidden">过</button>
+  </div>
+  <div id="gang-choices" class="hidden"></div>
+
+  <!-- 我的手牌 -->
+  <div id="my-area">
+    <button id="btn-sort" class="hbtn" title="整理手牌">整理</button>
+    <div id="my-melds"></div>
+    <div id="my-hand"></div>
+  </div>
+
+  <!-- 结算弹层 -->
+  <div id="result-overlay" class="hidden">
+    <div id="result-box">
+      <div id="result-title"></div>
+      <div id="result-detail"></div>
+      <div id="fan-tiles"></div>
+      <div id="result-scores"></div>
+      <button class="hbtn primary" id="btn-again">再来一局</button>
+    </div>
+  </div>
+
+  <!-- 分析面板(底部抽屉) -->
+  <div id="analysis-panel" class="hidden">
+    <div class="panel-header"><span>牌局分析</span><span class="close" id="close-analysis">x</span></div>
+    <div id="analysis-content"></div>
+  </div>
+
+  <!-- 复盘面板(底部抽屉) -->
+  <div id="review-panel" class="hidden">
+    <div class="panel-header"><span>赛后检讨</span><span class="close" id="close-review">x</span></div>
+    <div id="review-summary"></div>
+    <div id="review-content"></div>
+  </div>
+</div>
+
+<script src="js/tiles.js"></script>
+<script src="js/win.js"></script>
+<script src="js/ting.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/tileRenderer.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/bots_adv.js"></script>
+<script src="js/bot_v31.js"></script>
+<script src="js/analyzer.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
