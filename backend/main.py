@@ -77,7 +77,7 @@ def _gang_kind(g: Game, seat: int, tile: int) -> str:
 def _build_ai_bots(g: Game) -> dict:
     """构建 AI 阵容
 
-    默认走 roster 固定阵容(三席强度不同: 菜鸟v1 / 老鸟v4 / 挂哥oracle),
+    默认走 roster 固定阵容(三席强度不同: 菜鸟v1 / 老鸟v31 / 挂哥cheat_wall),
     与手机版保持一致。若显式指定了档位(会话参数 bot_kind 或环境变量
     MAHJONG_BOT), 则三席统一使用该档位, 便于横向评测单一 Bot 强度。
     """
