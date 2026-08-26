@@ -126,3 +126,34 @@ CQL 压低未见动作 Q，学到的 argmax 排序可优于规则Bot 启发式�
 - `gen_offline.py`: workers 支持到 160；`--bot-version` 选择陪练 Bot
 - `eval_parallel.py`（新）: spawn 多进程评估
 - `backend/rules/win.py`: `_dfs_cached` 模块级缓存
+
+---
+
+## 2026-08-27 凌晨: 塑形奖励 + GRPO 多世界组内比较 + 向听查表
+
+### 想法1: 塑形奖励（gen_offline --shaped）
+- 胡牌分: 实际翻牌 n 替换为 **E[n|牌墙] = 6×墙中159密度**（Rao-Blackwell,
+  只削翻牌抽样噪声）; 杠分保留; 加步数惩罚 -δ×总摸牌数（δ=0.02）
+- 方差: raw std 5.38 → shaped 5.03（去除约 14% 方差; 剩余为胜负本身不可约）
+- 所有新数据在**修复后规则**下生成（v10 陪练, 含碰杠 → 训练分布首次含副露）
+
+### 想法2: GRPO 多世界组内比较（world_grpo.py / grpo_train.py）
+- 状态采样 v10 自对弈快照 → 候选 = NN top-m ∪ v10选择 → n 个**共享世界**
+  （重洗未见牌: 对手暗牌+牌墙, 共同随机数消世界噪声）→ v1 快速推演到底
+  → 组内标准化优势 A=(r-mean)/std → 策略梯度 + β·KL(π‖π_ref) 锚定
+- 信号探针（128世界）: GRPO-argmax 与 v10 一致率 67%, 持续分歧幅度
+  0.1-0.5 分（接近噪声边缘, 是否有真信号由训练实验裁决）
+
+### 红中向听查表（MahJax 移植核心资产）
+- `build_suit_table.py`: 每花色 base-5 编码 × 可用红数(0-4) →
+  Pareto (m,t,p,红用量) 前沿表, K_MAX=32 截断(先按公式上限截断再支配剪枝)
+- 表 1.25GB (uint8), 压缩 10MB; **对拍 win.py DFS 10 万手 0 不一致**
+- `table_shanten.py`: Python 端读表合并（验证用; Python 侧速度与 DFS 相当,
+  价值在 JAX 端纯 gather）
+- JAX 环境: `.venv-jax`（jax 0.6.2 cuda12, 8×H20 全识别; 需
+  LD_LIBRARY_PATH 指向 venv 内 nvidia libs, 见 .venv-jax/nvlibs.txt）
+
+### DQN 重训（修复后规则 + 塑形, vs 强化后 v1 陪练）
+- v2陪练 20k small: 16.2%（数据太薄）
+- v2陪练 100k base cql=0.5: **26.6%** @15ep（+0.28）; cql=2.0: 26.2%（无差）
+- v10陪练 40k feat-v3: 生成中 → 夜间流水线自动接续训练
