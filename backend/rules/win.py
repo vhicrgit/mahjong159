@@ -79,35 +79,15 @@ def shanten_cached(tiles_counts: tuple) -> int:
 
 
 def shanten_with_melds(concealed_counts, n_melds: int) -> int:
-    """副露感知向听: 已有 n_melds 个副露(碰/杠各算1个完成面子)时,
-    对剩余暗牌的向听数。
+    """副露感知向听: 已有 n_melds 个副露时, 对剩余暗牌的向听数。
 
-    实现: 用 n_melds 个"虚拟刻子"(挑暗牌中张数为0的普通牌)把手补回
-    13/14 张等价形态, 复用 shanten 的 13 张公式。直接对 10/11 张暗牌调
-    shanten() 会高估约 2*n_melds 向听(公式硬编码 8=2*4), 历史上导致
-    规则Bot 判定"碰/杠必然变差"而从不鸣牌。
+    shanten() 已从手牌张数推导面子需求(13张→4, 副露1副的10张→3),
+    原生支持副露手, 直接调用即可。
+
+    历史教训: 最初的实现用"虚拟刻子填充"把手补回13张再算 —— 填充牌
+    在无孤立空位时会被 DFS 挪用进真实手的顺子/搭子, 向听被低估。
     """
-    if n_melds <= 0:
-        return shanten(list(concealed_counts))
-    c = list(concealed_counts)
-    pad = 0
-    for t in range(27):
-        if pad == n_melds:
-            break
-        # 虚拟刻子不能与真实手牌(或已填充牌)形成顺子交互: 同花色距离>=3
-        lo = t - t % 9
-        if any(c[u] for u in range(max(lo, t - 2), min(lo + 9, t + 3))):
-            continue
-        c[t] = 3
-        pad += 1
-    if pad < n_melds:  # 兜底: 罕见情况下退化为任意空位填充
-        for t in range(27):
-            if pad == n_melds:
-                break
-            if c[t] == 0:
-                c[t] = 3
-                pad += 1
-    return shanten(c)
+    return shanten(list(concealed_counts))
 
 
 def is_win(tiles_counts: list[int]) -> bool:
@@ -138,12 +118,16 @@ def is_win(tiles_counts: list[int]) -> bool:
     return False
 
 
-@lru_cache(maxsize=500000)
-def _dfs_cached(counts: tuple, red_left: int) -> tuple:
+@lru_cache(maxsize=800000)
+def _dfs_cached(counts: tuple, red_left: int, need: int) -> tuple:
     """返回 (m面子, t搭子, p将) 的 Pareto 前沿集合(tuple of tuples)。
 
+    need = 这副手还需要凑的面子总数（含红中凑的）: 普通13张=4,
+    副露 n 副后暗牌=4-n。原生支持任意手牌尺寸, 无需虚拟牌填充。
+    m/t 的公式上限就是 need, 在剪枝时直接按 need 截断。
+
     历史bug3: 旧版每个子状态只返回单一最优 (m,t,p), 但最终公式
-    shanten = 8 - 2m - min(t,4-m) - min(p,1) 有截断, 局部同分的
+    shanten = 2*need - 2m - min(t,need-m) - min(p,1) 有截断, 局部同分的
     (3,1,0)/(3,0,1) 全局价值不同 → 贪心收敛丢最优, 多红中漏胡/向听偏高。
     """
     counts = list(counts)
@@ -155,8 +139,8 @@ def _dfs_cached(counts: tuple, red_left: int) -> tuple:
     if t == -1:
         m, rem = divmod(red_left, 3)
         if rem == 2:
-            return _prune({(m, 0, 1), (m, 1, 0)})
-        return _prune({(m, 0, 0)})
+            return _prune({(m, 0, 1), (m, 1, 0)}, need)
+        return _prune({(m, 0, 0)}, need)
 
     cands: set = set()
 
@@ -166,30 +150,30 @@ def _dfs_cached(counts: tuple, red_left: int) -> tuple:
 
     # 选项1: 孤张跳过
     counts[t] -= 1
-    add(_dfs_cached(tuple(counts), red_left), 0, 0, 0)
+    add(_dfs_cached(tuple(counts), red_left, need), 0, 0, 0)
     counts[t] += 1
 
     # 选项2: 对子(将 或 刻子搭子; 历史bug4: 旧版对子只当将,
     # 双对子手"22将+66搭子"的 66 永不计入搭子)
     if counts[t] >= 2:
         counts[t] -= 2
-        sub = _dfs_cached(tuple(counts), red_left)
+        sub = _dfs_cached(tuple(counts), red_left, need)
         add(sub, 0, 0, 1)
         add(sub, 0, 1, 0)
         counts[t] += 2
     if counts[t] >= 1 and red_left >= 1:
         counts[t] -= 1
-        add(_dfs_cached(tuple(counts), red_left - 1), 0, 0, 1)
+        add(_dfs_cached(tuple(counts), red_left - 1, need), 0, 0, 1)
         counts[t] += 1
 
     # 选项3: 刻子
     if counts[t] >= 3:
         counts[t] -= 3
-        add(_dfs_cached(tuple(counts), red_left), 1, 0, 0)
+        add(_dfs_cached(tuple(counts), red_left, need), 1, 0, 0)
         counts[t] += 3
     if counts[t] >= 2 and red_left >= 1:
         counts[t] -= 2
-        add(_dfs_cached(tuple(counts), red_left - 1), 1, 0, 0)
+        add(_dfs_cached(tuple(counts), red_left - 1, need), 1, 0, 0)
         counts[t] += 2
 
     # 选项4: 顺子面子 (t 可为头/中/尾张, 缺牌由红中补;
@@ -201,12 +185,12 @@ def _dfs_cached(counts: tuple, red_left: int) -> tuple:
                 continue
             trio = (start, start + 1, start + 2)
             use = [1 if counts[x] >= 1 else 0 for x in trio]
-            need = 3 - sum(use)
-            if need > red_left:
+            need_red = 3 - sum(use)
+            if need_red > red_left:
                 continue
             for x, u in zip(trio, use):
                 counts[x] -= u
-            add(_dfs_cached(tuple(counts), red_left - need), 1, 0, 0)
+            add(_dfs_cached(tuple(counts), red_left - need_red, need), 1, 0, 0)
             for x, u in zip(trio, use):
                 counts[x] += u
 
@@ -217,27 +201,27 @@ def _dfs_cached(counts: tuple, red_left: int) -> tuple:
         if r <= 8 and counts[t + 1] >= 1:
             counts[t] -= 1
             counts[t + 1] -= 1
-            add(_dfs_cached(tuple(counts), red_left), 0, 1, 0)
+            add(_dfs_cached(tuple(counts), red_left, need), 0, 1, 0)
             counts[t] += 1
             counts[t + 1] += 1
         # 嵌张 t,t+2 (同花色: r<=7)
         if r <= 7 and counts[t + 2] >= 1:
             counts[t] -= 1
             counts[t + 2] -= 1
-            add(_dfs_cached(tuple(counts), red_left), 0, 1, 0)
+            add(_dfs_cached(tuple(counts), red_left, need), 0, 1, 0)
             counts[t] += 1
             counts[t + 2] += 1
         # 红中搭子 t+红 (完成面最宽, 覆盖旧的红中补两面/嵌张)
         if red_left >= 1:
             counts[t] -= 1
-            add(_dfs_cached(tuple(counts), red_left - 1), 0, 1, 0)
+            add(_dfs_cached(tuple(counts), red_left - 1, need), 0, 1, 0)
             counts[t] += 1
-    return _prune(cands)
+    return _prune(cands, need)
 
 
-def _prune(cands: set) -> tuple:
+def _prune(cands: set, need: int = 4) -> tuple:
     """截断到公式上限后保留分量支配意义下的 Pareto 前沿。"""
-    capped = {(min(m, 4), min(t, 4), min(p, 1)) for m, t, p in cands}
+    capped = {(min(m, need), min(t, need), min(p, 1)) for m, t, p in cands}
     return tuple(sorted(
         x for x in capped
         if not any(y != x and y[0] >= x[0] and y[1] >= x[1] and y[2] >= x[2]
@@ -245,17 +229,19 @@ def _prune(cands: set) -> tuple:
 
 
 def shanten(tiles_counts: list[int]) -> int:
-    """最小向听数(0=听牌, -1=已胡)。支持红中。
+    """最小向听数(0=听牌, -1=已胡)。支持红中与任意手牌尺寸。
 
-    DFS 求 (面子m, 搭子t, 将p) 的 Pareto 前沿,
-    shanten = min over 前沿 of 8 - 2m - min(t, 4-m) - min(p, 1)
+    need(面子需求)由手牌张数推导: 13张→4, 副露1副的10张→3。
+    常数固定 2*need: 13张经典 8 - 2m - t - p; 14张(3n+2)自动得 -1=胡。
     """
     red = tiles_counts[RED]
     counts = tuple(tiles_counts[:27])
+    total = sum(counts) + red
+    need = max(1, (total - 1) // 3)
     best = 99
-    for m, t, p in _dfs_cached(counts, red):
-        m = min(m, 4)
-        t = min(t, 4 - m)
+    for m, t, p in _dfs_cached(counts, red, need):
+        m = min(m, need)
+        t = min(t, need - m)
         p = min(p, 1)
-        best = min(best, 8 - 2 * m - t - p)
+        best = min(best, 2 * need - 2 * m - t - p)
     return best
