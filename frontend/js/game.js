@@ -394,7 +394,8 @@ function showResult() {
     return;
   }
   title.textContent = (state.winner === 0 ? "你胡了!" : SEAT_NAMES[state.winner] + " 胡了");
-  const kindName = state.win_kind === "gangshang" ? "杠上花" : "自摸";
+  const KIND_NAME = { gangshang: "杠上花", tianhu: "天胡", zimo: "自摸" };
+  const kindName = KIND_NAME[state.win_kind] || "自摸";
   let d = `胡牌方式: ${kindName}<br>159翻牌: `;
   d += '<div id="fan-tiles">';
   for (const t of state.fan_159) d += makeTileEl(t, "small").outerHTML;

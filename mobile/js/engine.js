@@ -49,11 +49,21 @@ class Game {
       p.hand = this.wall.splice(0, 13).sort((a, b) => a - b);
     }
     const d = this.players[this.dealer];
-    d.hand.push(this.wall.shift());
+    const last = this.wall.shift();
+    d.hand.push(last);
     d.hand.sort((a, b) => a - b);
     this.turn = this.dealer;
     this.phase = "discard_wait";
     this.log.push(`发牌完成, 庄家: 座位${this.dealer}`);
+    // 天胡: 庄家开局 14 张即成胡牌形态。isWin 本身判定正确, 但原先只在
+    // _nextDraw / _drawAfterGang 里调用, 发牌阶段一次都不查, 导致天胡被漏判,
+    // 庄家明明已经胡了还被要求继续出牌。
+    // (非庄家的"地胡"由 _nextDraw 的自摸检查天然覆盖, 无需额外处理)
+    if (isWin(d.handCounts())) {
+      this.lastDrawn = { seat: this.dealer, tile: last };
+      this.log.push(`座位${this.dealer} 天胡`);
+      this._hu(this.dealer, last, "tianhu");
+    }
   }
 
   wallRemaining() { return this.wall.length; }

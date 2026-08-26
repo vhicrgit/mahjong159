@@ -50,7 +50,7 @@ class Game:
         self.pending_actions: dict = {}   # seat -> {'peng':bool,'gang':bool}
         self.winner: int | None = None
         self.win_tile: int | None = None
-        self.win_kind: str | None = None   # 'zimo' / 'gangshang'
+        self.win_kind: str | None = None   # 'zimo' / 'gangshang' / 'tianhu'
         self.fan_159: list[int] = []       # 翻出的6张159牌
         self.n_159 = 0
         self.huangzhuang = False
@@ -66,11 +66,21 @@ class Game:
             p.hand = sorted(self.wall[:13])
             self.wall = self.wall[13:]
         # 庄家多摸一张
-        self.players[self.dealer].hand.append(self.wall.pop(0))
+        last = self.wall.pop(0)
+        self.players[self.dealer].hand.append(last)
         self.players[self.dealer].hand.sort()
         self.turn = self.dealer
         self.phase = "discard_wait"  # 庄家直接出牌
         self.log.append(f"发牌完成, 庄家: 座位{self.dealer}")
+        # 天胡: 庄家开局 14 张即成胡牌形态。is_win 本身判定正确, 但原先只在
+        # _next_draw / _draw_after_gang 里调用, 发牌阶段一次都不查, 导致天胡
+        # 被漏判, 庄家明明已经胡了还被要求继续出牌。
+        # (非庄家的"地胡"由 _next_draw 的自摸检查天然覆盖, 无需额外处理)
+        # 与 mobile/js/engine.js 的 _deal 保持一致, 修改时必须同步两边。
+        if is_win(self.players[self.dealer].hand_counts):
+            self.last_drawn = {"seat": self.dealer, "tile": last}
+            self.log.append(f"座位{self.dealer} 天胡")
+            self._hu(self.dealer, last, "tianhu")
 
     # ---------- 工具 ----------
     def wall_remaining(self) -> int:
