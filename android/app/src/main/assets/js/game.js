@@ -12,12 +12,13 @@ const AI_DELAY = 200;   // AI 回合间隔(搜索本身也需时间, 不必额�
 const SEAT_NAMES = ["我", "下家", "对家", "上家"];
 
 // 对手阵容: seat -> {昵称, 工厂函数, 说明}
-// shanten 优化后参数已拉到 Python 同级强度(实测老鸟 ~60ms/次, 挂哥 ~120ms/次)
+// 与 backend/ai/roster.py 的 ROSTER 保持一致
+// 老鸟已从 v4 升级为 v31(副露感知向听 + 两步推演), 会正常碰杠
 const ROSTER = {
   1: { nick: "菜鸟", desc: "规则Bot v1: 牌效优先",
        make: (g, s) => new Bot(g, s) },
-  2: { nick: "老鸟", desc: "规则Bot v4: 解析+搜索精修",
-       make: (g, s) => new BotV4(g, s, { worlds: 24, beam: 6, horizon: 6 }) },
+  2: { nick: "老鸟", desc: "规则Bot v31: 两步推演+副露感知向听",
+       make: (g, s) => new BotV31(g, s) },
   3: { nick: "挂哥", desc: "作弊Bot: 可见牌堆",
        make: (g, s) => new BotOracle(g, s, { beam: 12 }) },
 };
@@ -272,10 +273,16 @@ function renderMyHand() {
   const recTile = (lastAnalysis && lastAnalysis.discards && lastAnalysis.discards.length)
     ? lastAnalysis.discards[0].tile : null;
   const drawnTile = (game.lastDrawn && game.lastDrawn.seat === 0) ? game.lastDrawn.tile : null;
+  // 「荐」只标一张: 推荐结果是牌值, 若按牌值标记, 手里一对会两张都亮,
+  // 看上去像在建议"把这对打掉"。与选中逻辑保持一致: 按索引只标首张。
+  let recMarked = false;
   for (const card of displayHand) {
     const el = makeTileEl(card.tile, "lg", true, card.uid);
     if (card.uid === selectedUid) el.classList.add("selected");
-    if (recTile !== null && card.tile === recTile) el.classList.add("recommended");
+    if (!recMarked && recTile !== null && card.tile === recTile) {
+      el.classList.add("recommended");
+      recMarked = true;
+    }
     if (drawnTile !== null && card.tile === drawnTile) el.classList.add("drawn");
     myHand.appendChild(el);
   }
@@ -291,13 +298,19 @@ function updateTingHint() {
     document.getElementById("my-area").prepend(hintEl);
   }
   if (!game || game.phase === "game_over") { hintEl.innerHTML = ""; return; }
-  const counts = game.players[0].handCounts();
-  const s = shanten(counts);
-  if (s === 0 && game.players[0].hand.length % 3 === 1) {
+  const p = game.players[0];
+  const counts = p.handCounts();
+  // 必须用副露感知向听: 碰/杠后暗牌变短(11/10张), 直接调 shanten() 会把
+  // 向听高估约 2*副露数, 导致"有副露时已经听牌了却不提示"
+  // (实测: 1个碰 + 暗牌听牌, 旧逻辑算出 2, 正确值是 0)
+  const s = shantenWithMelds(counts, p.melds.length);
+  if (s === 0 && p.hand.length % 3 === 1) {
     const names = waitingTiles(counts).map(tileName).join(" ");
     hintEl.innerHTML = `<span class='ting-ok'>已听牌, 听: ${names}</span>`;
   } else if (s >= 0) {
     hintEl.innerHTML = `<span class='ting-no'>向听数: ${s}</span>`;
+  } else {
+    hintEl.innerHTML = "";
   }
 }
 
@@ -337,10 +350,24 @@ function updateActionButtons() {
     const gopts = game.gangOptions(0);
     if (gopts.length) {
       gc.classList.remove("hidden");
+      // 加文字提示: 以前只摆一张光秃的浮空牌, 看不出那是可点的开杠按钮
+      const tip = document.createElement("span");
+      tip.className = "gang-tip";
+      tip.textContent = "可杠(点牌开杠):";
+      gc.appendChild(tip);
       for (const t of gopts) {
+        const p0 = game.players[0];
+        const kind = p0.hand.filter(x => x === t).length === 4 ? "暗杠" : "补杠";
+        const wrap = document.createElement("div");
+        wrap.className = "gang-choice";
         const el = makeTileEl(t, "md");
-        el.onclick = () => doGangTile(t);
-        gc.appendChild(el);
+        wrap.appendChild(el);
+        const lb = document.createElement("span");
+        lb.className = "gang-kind";
+        lb.textContent = kind;
+        wrap.appendChild(lb);
+        wrap.onclick = () => doGangTile(t);
+        gc.appendChild(wrap);
       }
     }
   }
@@ -498,7 +525,8 @@ function showResult() {
     fan.innerHTML = "";
   } else {
     title.textContent = game.winner === 0 ? "你胡了!" : seatLabel(game.winner) + " 胡了";
-    detail.textContent = (game.winKind === "gangshang" ? "杠上花" : "自摸") +
+    const KIND_NAME = { gangshang: "杠上花", tianhu: "天胡", zimo: "自摸" };
+    detail.textContent = (KIND_NAME[game.winKind] || "自摸") +
       " | 中出1/5/9共 " + game.n159 + " 张, 每家赔 " + (game.n159 + 1) + " 分";
     fan.innerHTML = "";
     for (const t of game.fan159) fan.appendChild(makeTileEl(t, "md"));

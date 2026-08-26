@@ -106,8 +106,23 @@ html, body {
 }
 .abtn:active { background: #40916c; }
 #gang-choices {
-  display: flex; justify-content: center; gap: 6px;
+  display: flex; justify-content: center; align-items: center; gap: 8px;
   padding: 6px; background: #1b4332; flex-shrink: 0; flex-wrap: wrap;
+}
+/* 杠选项: 以前只是一张光秃的浮空牌, 玩家看不出能点。加标签 + 高亮外框 */
+#gang-choices .gang-tip {
+  color: #ffd166; font-size: 13px; font-weight: bold;
+}
+#gang-choices .gang-choice {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 3px 5px; border: 2px solid #ffd166; border-radius: 6px;
+  background: rgba(255, 209, 102, .12); cursor: pointer;
+}
+#gang-choices .gang-choice:active {
+  background: rgba(255, 209, 102, .3);
+}
+#gang-choices .gang-kind {
+  color: #ffd166; font-size: 11px; line-height: 1;
 }
 
 /* 我的手牌 */
