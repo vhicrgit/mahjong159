@@ -1,5 +1,9 @@
-/* 安康159 - 规则AI对手(JS版)
- * 翻译自 backend/ai/bot.py
+/* 安康159 - 规则AI对手(菜鸟 v1, JS版)
+ * 翻译自 backend/ai/bot_v1.py, 修改时必须同步两边
+ *
+ * decidePeng/decideGang 使用副露感知向听(shantenWithMelds):
+ * 直接对碰后的 11 张暗牌调 shanten() 会高估约 2*副露数,
+ * 导致"碰后向听降低"几乎永远不成立, Bot 从不鸣牌。
  */
 
 class Bot {
@@ -47,22 +51,34 @@ class Bot {
 
   decidePeng(tile) {
     const p = this.game.players[this.seat];
+    const nMelds = p.melds.length;
     const counts = p.handCounts();
-    const before = shanten(counts);
-    const c2 = counts.slice();
-    c2[tile] -= 2;
-    return shanten(c2) < before;
+    const before = shantenWithMelds(counts, nMelds);
+    // 碰后: 暗牌-2, 副露+1, 且必须再打出一张
+    const c11 = counts.slice();
+    c11[tile] -= 2;
+    let after = 99;
+    for (let d = 0; d < TILE_COUNT; d++) {
+      if (c11[d] <= 0) continue;
+      c11[d] -= 1;
+      const s = shantenWithMelds(c11, nMelds + 1);
+      c11[d] += 1;
+      if (s < after) after = s;
+    }
+    return after < before;
   }
 
   decideGang(tile, kind) {
     const p = this.game.players[this.seat];
+    const nMelds = p.melds.length;
     const counts = p.handCounts();
-    const sBefore = shanten(counts);
+    const sBefore = shantenWithMelds(counts, nMelds);
     const c2 = counts.slice();
-    if (kind === "ming") c2[tile] -= 3;
-    else if (kind === "an") c2[tile] -= 4;
-    else c2[tile] -= 1;
-    const sAfter = shanten(c2);
+    let nAfter;
+    if (kind === "ming") { c2[tile] -= 3; nAfter = nMelds + 1; }
+    else if (kind === "an") { c2[tile] -= 4; nAfter = nMelds + 1; }
+    else { c2[tile] -= 1; nAfter = nMelds; }   // bu: 碰转杠, 副露数不变
+    const sAfter = shantenWithMelds(c2, nAfter);
     if (sBefore === 0 && sAfter > 0) return false;
     return true;
   }
