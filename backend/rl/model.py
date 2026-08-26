@@ -34,9 +34,11 @@ class ResBlock(nn.Module):
 
 
 class MahjongNet(nn.Module):
-    def __init__(self, hidden_dim: int = 128, num_blocks: int = 4):
+    def __init__(self, hidden_dim: int = 128, num_blocks: int = 4,
+                 feat_dim: int = FEAT_DIM):
         super().__init__()
-        self.input_proj = nn.Linear(FEAT_DIM, hidden_dim)
+        self.feat_dim = feat_dim
+        self.input_proj = nn.Linear(feat_dim, hidden_dim)
         self.blocks = nn.ModuleList(ResBlock(hidden_dim) for _ in range(num_blocks))
         self.q_head = nn.Linear(hidden_dim, N_ACTIONS)       # Q值头
         self.value_head = nn.Sequential(
@@ -79,8 +81,8 @@ MODEL_CONFIGS = {
 }
 
 
-def build_model(size: str = "tiny") -> MahjongNet:
-    return MahjongNet(**MODEL_CONFIGS[size])
+def build_model(size: str = "tiny", feat_dim: int = FEAT_DIM) -> MahjongNet:
+    return MahjongNet(**MODEL_CONFIGS[size], feat_dim=feat_dim)
 
 
 def legal_discard_mask(hand_counts: list[int]) -> torch.Tensor:

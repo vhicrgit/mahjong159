@@ -31,12 +31,99 @@ def _make_bot(kind, game, seat, param=0):
         return B(game, seat, worlds=param or 48,
                  horizon=int(os.environ.get("V4_H", 6)),
                  refine_scale=float(os.environ.get("V4_RS", 30)))
+    if kind == "v5":
+        from .bot_v5 import Bot as B
+        return B(game, seat, margin=param or 6)
+    if kind == "v6":
+        from .bot_v6 import Bot as B
+        return B(game, seat)
+    if kind == "v7":
+        from .bot_v7 import Bot as B
+        return B(game, seat)
+    if kind == "v8":
+        from .bot_v8 import Bot as B
+        return B(game, seat)
+    if kind == "v9":
+        from .bot_v9 import Bot as B
+        return B(game, seat)
+    if kind == "v10":
+        from .bot_v10 import Bot as B
+        return B(game, seat)
+    if kind == "v11":
+        from .bot_v11 import Bot as B
+        return B(game, seat)
+    if kind == "v12":
+        from .bot_v12 import Bot as B
+        return B(game, seat, worlds=param or None)
+    if kind == "v13":
+        from .bot_v13 import Bot as B
+        return B(game, seat)
+    if kind == "v14":
+        from .bot_v14 import Bot as B
+        return B(game, seat)
+    if kind == "v15":
+        from .bot_v15 import Bot as B
+        return B(game, seat)
+    if kind == "v16":
+        from .bot_v16 import Bot as B
+        return B(game, seat)
+    if kind == "v17":
+        from .bot_v17 import Bot as B
+        return B(game, seat)
+    if kind == "v18":
+        from .bot_v18 import Bot as B
+        return B(game, seat)
+    if kind == "v19":
+        from .bot_v19 import Bot as B
+        return B(game, seat)
+    if kind == "v20":
+        from .bot_v20 import Bot as B
+        return B(game, seat)
+    if kind == "v21":
+        from .bot_v21 import Bot as B
+        return B(game, seat)
+    if kind == "v22":
+        from .bot_v22 import Bot as B
+        return B(game, seat)
+    if kind == "v23":
+        from .bot_v23 import Bot as B
+        return B(game, seat)
+    if kind == "v24":
+        from .bot_v24 import Bot as B
+        return B(game, seat)
+    if kind == "v25":
+        from .bot_v25 import Bot as B
+        return B(game, seat)
+    if kind == "v26":
+        from .bot_v26 import Bot as B
+        return B(game, seat)
+    if kind == "v27":
+        from .bot_v27 import Bot as B
+        return B(game, seat)
+    if kind == "v28":
+        from .bot_v28 import Bot as B
+        return B(game, seat)
+    if kind == "target":
+        from .bot_target import Bot as B
+        return B(game, seat)
     if kind == "pimc":
         from .bot_pimc import Bot as B
         return B(game, seat, worlds=param or 32)
     if kind == "oracle":
         from .bot_oracle import Bot as B
         return B(game, seat, beam=param or 12)
+    if kind == "cheat_full":
+        from .bot_cheat import Bot as B
+        return B(game, seat, wall_lookahead=-1, see_opponents=True,
+                 beam=param or 4, rollout=True)
+    if kind == "cheat_wall":
+        from .bot_cheat import Bot as B
+        return B(game, seat, wall_lookahead=param or 32,
+                 see_opponents=False, beam=12, rollout=False)
+    if kind == "cheat_opp":
+        from .bot_cheat import Bot as B
+        return B(game, seat, wall_lookahead=param or 32,
+                 see_opponents=True, beam=12, rollout=False)
     raise ValueError(kind)
 
 
@@ -68,7 +155,8 @@ def play_one(args):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bot", type=str, default="v2",
-                    choices=["v1", "v2", "v3", "v4", "oracle", "pimc"])
+                    choices=["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "target", "oracle", "pimc",
+                             "cheat_full", "cheat_wall", "cheat_opp"])
     ap.add_argument("--games", type=int, default=2000)
     ap.add_argument("--procs", type=int, default=100)
     ap.add_argument("--seat", type=int, default=0)

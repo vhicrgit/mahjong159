@@ -16,8 +16,12 @@
 | DQN 离线 large 43M | 28.2% | +0.42 | **参数×6.4 无增益** |
 | v3 MC 搜索(64 rollout) | 29.4% ±2.8% | +0.61 | 启发式骨架 + 贪心 rollout |
 | **v4 混合搜索** | **31.0-31.7% ±3.7%** | +0.77 | 解析骨架 + 同向听内 beam 搜索 |
+| **v10 广义进张规则** | **32.1% ±2.0%** | +0.92 | 最小向听优先 + 非听牌广义进张 tie-break |
+| target/v5 系列 | 31-35% 小样本 | +0.6~1.5 | 目标路线概率/同分精修，未稳定破 40% |
 | 纯 PIMC | 15-21% | 负 | **失败**（见第五节） |
-| **Oracle（作弊）** | **48-50%** | +2.7~3.0 | 上界 |
+| **Oracle（作弊）** | **48-50%** | +2.7~3.0 | 只看自己未来摸牌的旧上界 |
+| **cheat_full（强作弊）** | **82.5% ±4.8%** | +9.79 | 全牌墙+对手手牌+root rollout |
+| cheat_wall / cheat_opp | 45-47% | +2 左右 | 有限看牌墙/看对手手牌的难度档 |
 
 ---
 
@@ -45,16 +49,27 @@ v1 规则Bot 四座位自对战（各 2000 局）:
 
 ---
 
-## 三、Oracle 上界 = 49.8%，>50% 数学上不可达
+## 三、信息分档上界（2026-08-26 修正: 49.8% 不是数学上界）
 
 `bot_oracle.py`: 作弊读 `game.wall`，推算自己未来摸牌序列，beam search 找
 最快胡牌路径。beam 12→48.1%，beam 24→49.5%，新效用尺度→49.8%（已收敛）。
 
-**一个知道自己所有未来摸牌的作弊 Bot 只能到 49.8%** → 任何不作弊 AI 必然更低。
-27.4%→49.8% 的差距主要是"不知道未来摸牌"的信息价值，技术无法消除。
+**修正**: 此前表述"Oracle 上界 49.8%，>50% 数学上不可达"已被 cheat_full
+（82.5%，见第六节）证伪。正确的分档表述:
 
-（Oracle 尚未用满信息: 碰杠仍用启发式、看不到对手手牌、beam 近似。
-真正全知上帝可能 55-60%，但与真实 AI 无关。）
+| 信息档位 | 实测 | 性质 |
+|---------|------|------|
+| 盲打 | 27-32% | 所有非作弊方法实测聚集区 |
+| 只知自己未来摸牌（oracle） | 49.8% | 该档位 bot 族的收敛值，是该档最优的**下界近似** |
+| 全信息（牌墙+对手手牌, cheat_full） | 82.5% | 全信息上界 ≥ 82.5%（旧估"全知55-60%"严重低估） |
+
+cheat_full 多出的 ~33 点来自 oracle 未用到的信息杠杆: 知道牌墙内容后
+**碰/杠可定向改变摸牌顺序**（让对手错过自摸、让自己撞上）+ 精确防喂杠。
+
+**盲打上限 ≈28-30% 的实际判断不受影响**: 这些杠杆全部依赖"看见牌墙/对手
+手牌"（盲目碰杠改牌墙在期望上对称零收益）；27.4%→49.8% 的差距主体仍是
+"不知道未来摸牌"的信息价值，对盲打不可迁移。但注意"盲打必然<49.8%"
+不再是严格数学论证（49.8% 只是近似最优），而是经验判断。
 
 ---
 
@@ -93,7 +108,82 @@ score(t) = -100×shanten(t) + 3×进张(t) - 25×放杠风险(t)   [解析层, �
 
 ---
 
-## 五、纯 PIMC 为什么失败（15-21%）—— 重要教训
+## 五、目标牌型/概率规则 Bot（2026-08-26）
+
+用户提出的方向是：从当前牌型枚举 1-5 进张内可达胡牌方向，再估计未来 1-10 次摸牌达成概率，用来决定出牌。调研后采用的可运行近似是：
+
+- `bot_target.py`: 解析最小向听候选内，构造“进张链”，估计短/长视野自摸概率；支持 `TARGET_SHORT_H`、`TARGET_LONG_H`、`TARGET_STEPS`、`TARGET_FRONTIER_CAP`、`TARGET_*_SCALE` 调参。
+- `bot_v5.py`: v2 解析评分为主，只在近似同分候选里用 target 概率精修。
+- `bot_v10.py`: 当前最稳普通分支。坚持最小向听优先，用“任意向听下的有效进张 + 一步摸后最优弃牌价值”替换 v1/v2 只在听牌时才有 `wait_count` 的缺口。`backend/ai/bot.py` 已切到该策略，`bot_v1.py` 保留为历史基准。
+- `bot_v14.py`: v10 + 保守开副露后 open-shanten；500 局与同 seed v10 都是 35.2%，未证明开副露带来净增益。
+- `bot_v15.py`/`bot_v17.py`: 更深有限视野 DP/二步价值，计算更重，初筛未超过 v10。
+
+当前证据（同口径座位0 vs 3×v1）：
+
+| Bot/参数 | 样本 | 胜率 | 场均 | 结论 |
+|----------|------|------|------|------|
+| v1 same seed | 3000 | 24.8% ±1.5% | +0.099 | 基线（seed0=980000，波动偏低） |
+| v1 historical | 2000 | 27.4% ±2.0% | +0.322 | 常用正确座位0基线 |
+| **v10 `RISK=0,U=1.0,CONT=0.5`** | 3000 | **31.1% ±1.7%** | +0.753 | 当前最佳稳定普通 bot，`bot.py` 默认 |
+| v10 `RISK=0,U=1.0,CONT=0.5` | 2000 | 32.1% ±2.0% | +0.917 | 另一 seed 验证 |
+| v10 self-gang only for tester | 2000 | 32.6% ±2.1% | +0.992 | 暗杠/补杠口径，增益很小 |
+| v10 no-call(v21) | 1000 | 30.7% ±2.9% | +0.640 | 不碰不杠无增益；同 seed v10=30.6% |
+| v10 `CONT_MAX_SH=3` | 500 | 32.2% ±4.1% | +1.046 | 不如同 seed 默认 32.8% |
+| v20 soft-shanten | 500 | 29.6% ±4.0% | +0.798 | 与同 seed v10 完全相同，无增益 |
+| v18 open-aware post-meld | 500 | 33.8% ±4.1% | +1.272 | 同 seed v10=35.6%/另一次v10=30.0%；小样本信号不稳定 |
+| v23 post-meld only | 500 | 30.0% ±4.0% | +0.746 | 同 seed v10=30.0%，无增益 |
+| v24 shape/red tie-break | 500 | 32.0% ±4.1% | +0.964 | 不如同 seed v10 33.2% |
+| v17 draw-then-discard 二步有效进张 | 500 | 30.8% ±4.0% | +0.628 | 不如 v10，深一点的概率近似有害 |
+| v22 strict effective ukeire | 500 | 31.8% ±4.1% | +0.778 | 不如同 seed v10 32.8% |
+| v26 reaction/open-aware call search | 500 | 31.4% ±4.1% | +0.854 | 高于同 seed v10 29.6 但小样本；2000局验证过慢被停止 |
+| v27 turn-steal reaction-call | 500 | 31.8% ±4.1% | +0.800 | 同 seed v10=31.8%，无增益 |
+| v10 `u=0.6,c=1.5,r=30` tuned candidate | 1000 | 27.6% ±2.8% | +0.263 | 小样本网格第一名，放大验证回归；同 seed 默认 v10=31.6% |
+| v10 `U=1.0,CONT=0` | 1000 | 32.2% ±2.9% | +0.931 | 与 best 接近 |
+| v10 `U=0.5,CONT=0` | 1000 | 29.6% ±2.8% | +0.676 | 弱 |
+| v10 `U=1.5,CONT=0` | 1000 | 31.3% ±2.9% | +0.760 | 略弱 |
+| target 默认 | 300 | 31.0% ±5.2% | +0.580 | 有效但不稳 |
+| v5 margin=3 | 80 | 33.8% ±10.4% | +0.588 | 小样本正向，后续不稳 |
+| v6/v8/v9/v11/v12/v13/v16 | 40-500 | 12-27% | 多数为负 | 已降优先级 |
+
+结论：目标概率/广义进张思路能把普通 bot 从 v1 的 24.8-27.4% 推到约 31-32%，但仍未达到 40%。目前看可迁移增益主要来自“非听牌阶段也统计有效进张”，而不是更深采样/rollout；过深搜索、soft-shanten、no-call、shape/red tie-break、open-aware、reaction-call 以及 belief rollout 均未在同口径评估中稳定超过 v10。
+
+---
+
+## 六、作弊 Bot 分级（2026-08-26）
+
+新增 `bot_cheat.py`，统一支持三档作弊程度：
+
+- `cheat_wall`: 只看牌墙前 N 张，不看对手手牌。
+- `cheat_opp`: 看牌墙前 N 张 + 对手手牌，用对手真实可碰/杠能力修正风险。
+- `cheat_full`: 看完整牌墙 + 对手手牌；先用 oracle beam 排序，再对根出牌做 deterministic rollout；支持 `CHEAT_DEPTH`、`CHEAT_WIDTH`、`CHEAT_ROOT_WIDTH` 调强度/速度。
+
+当前证据（座位0 vs 3×v1）：
+
+| Bot/参数 | 样本 | 胜率 | 场均 | 结论 |
+|----------|------|------|------|------|
+| oracle beam24（仅自摸未来牌墙） | 1000 | 48.2% ±3.1% | +2.748 | 旧 oracle 口径上界复测 |
+| cheat_wall lookahead16 | 80 | 36.2% ±10.5% | +1.350 | 有限看墙低难度 |
+| cheat_wall lookahead64 | 120 | 46.7% ±8.9% | +2.625 | 有限看墙中难度 |
+| cheat_wall lookahead112 | 1000 | 47.0% ±3.1% | +2.658 | 只看整段牌墙、不看对手手牌 |
+| cheat_opp lookahead64 | 120 | 45.0% ±8.9% | +1.958 | 对手手牌风险修正未明显增益 |
+| **cheat_full depth2 width2/root28/beam4** | **240** | **82.5% ±4.8%** | **+9.787** | 最强作弊档，已超过 70% |
+
+`bot_eval_gang.py` 另提供 self-gang-enabled 口径；该口径与历史评估不同，只应用于专门测暗杠/补杠收益。
+
+后端对局可用环境变量或新开局参数切换 AI 难度：
+```bash
+MAHJONG_BOT=v10          # 默认普通 bot
+MAHJONG_BOT=target       # 目标概率实验 bot
+MAHJONG_BOT=cheat_wall MAHJONG_BOT_PARAM=64  # 只看前64张牌墙
+MAHJONG_BOT=cheat_opp  MAHJONG_BOT_PARAM=64  # 看前64张牌墙+对手手牌威胁
+MAHJONG_BOT=cheat_full  # 最强全信息作弊 bot
+```
+
+前端顶部已加入 AI 难度选择；API 也支持 `POST /api/new_game` 传 `bot_kind` / `bot_param`。
+
+---
+
+## 七、纯 PIMC 为什么失败（15-21%）—— 重要教训
 
 PIMC（完美信息蒙特卡罗）是桥牌/Skat 标准强方法，这里却远低于基线。三层原因:
 
@@ -108,7 +198,7 @@ PIMC（完美信息蒙特卡罗）是桥牌/Skat 标准强方法，这里却远�
 
 ---
 
-## 六、CQL 权重 = 模仿教师强度（理论关联）
+## 八、CQL 权重 = 模仿教师强度（理论关联）
 
 离线损失的 CQL 项 `logsumexp_legal(Q) - Q[a_teacher]` **恰好等于**
 教师动作在 softmax(Q) 下的负对数似然（BC 交叉熵）。
@@ -119,16 +209,30 @@ PIMC（完美信息蒙特卡罗）是桥牌/Skat 标准强方法，这里却远�
 
 ---
 
-## 七、目标与路线
+## 九、目标与路线
 
 **用户已确认保留 >50% 目标**（虽 Oracle 上界 49.8%）。现实预期停在 35-42%。
 
 技术路线（LuckyJ 式，搜索+学习）: 搜索有效（+2 点/64 rollout）而纯监督饱和
 （28.2%）→ **用搜索做教师**，详见 `self_evolution_roadmap.md`。
 
+2026-08-26: `models/og_300k.npz` 已完成，已启动短程 `dqn_og_300k_test.pt` 训练与旧 `oracle_guided_*_best.pt` 复评；这些还只是待验证学习路线，未计入上表。
+
 ## 复现命令
 ```bash
-python -m backend.ai.bot_eval --bot v1     --games 2000 --procs 130 --seat 0
+# 当前默认普通规则 bot（bot.py -> bot_v10）对历史 v1 基线
+python -m backend.ai.bot_eval --bot v10 --games 3000 --procs 96 --seat 0 --seed0 980000
+python -m backend.ai.bot_eval --bot v1  --games 3000 --procs 96 --seat 0 --seed0 980000
+
+# 最强作弊 bot；环境变量控制搜索宽度/深度，param 控制 oracle beam
+CHEAT_DEPTH=2 CHEAT_WIDTH=2 CHEAT_ROOT_WIDTH=28 \
+  python -m backend.ai.bot_eval --bot cheat_full --games 240 --procs 16 --seat 0 --seed0 748000 --param 4
+
+# 有限作弊档位示例
+python -m backend.ai.bot_eval --bot cheat_wall --games 120 --procs 8 --seat 0 --param 64
+python -m backend.ai.bot_eval --bot cheat_opp  --games 120 --procs 8 --seat 0 --param 64
+
+# 历史/对照
 python -m backend.ai.bot_eval --bot v4     --games 2000 --procs 130 --param 12
 python -m backend.ai.bot_eval --bot oracle --games 2000 --procs 130 --param 24
 python -m backend.ai.bot_battle --games 4000 --procs 100 --bot v2

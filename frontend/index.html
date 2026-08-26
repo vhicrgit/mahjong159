@@ -14,6 +14,16 @@
     <div class="top-info">
       <span id="wall-info">牌堆: -</span>
       <span id="dealer-info">庄家: -</span>
+      <label class="bot-select-label">AI:
+        <select id="bot-kind">
+          <option value="v10">普通(v10)</option>
+          <option value="target">目标概率</option>
+          <option value="cheat_wall">看牌墙</option>
+          <option value="cheat_opp">看牌墙+手牌</option>
+          <option value="cheat_full">全信息</option>
+        </select>
+      </label>
+      <input id="bot-param" class="bot-param" type="number" min="0" value="64" title="看牌墙张数 / beam 参数">
       <button id="btn-review" class="btn">复盘</button>
       <button id="btn-analysis" class="btn">分析</button>
       <button id="btn-new" class="btn btn-primary">新开局</button>

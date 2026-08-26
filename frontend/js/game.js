@@ -53,7 +53,9 @@ async function newGame() {
   lastAnalysis = null;
   document.getElementById("result-overlay").classList.add("hidden");
   document.getElementById("review-panel").classList.add("hidden");
-  state = await api("new_game", { dealer: 0 });
+  const botKind = document.getElementById("bot-kind")?.value || "v10";
+  const botParam = Number(document.getElementById("bot-param")?.value || 0);
+  state = await api("new_game", { dealer: 0, bot_kind: botKind, bot_param: botParam });
   render();
   refreshAnalysis();
 }

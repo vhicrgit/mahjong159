@@ -36,6 +36,38 @@ def current_game() -> Game:
     return g
 
 
+def _make_ai_bot(g: Game, seat: int):
+    kind = _session.get("bot_kind") or os.environ.get("MAHJONG_BOT", "v10")
+    param = int(_session.get("bot_param") or os.environ.get("MAHJONG_BOT_PARAM", "0"))
+    if kind in ("v10", "normal"):
+        return Bot(g, seat)
+    if kind == "v1":
+        from .ai.bot_v1 import Bot as B
+        return B(g, seat)
+    if kind == "target":
+        from .ai.bot_target import Bot as B
+        return B(g, seat)
+    if kind == "cheat_wall":
+        from .ai.bot_cheat import Bot as B
+        return B(g, seat, wall_lookahead=param or 32,
+                 see_opponents=False, beam=12, rollout=False)
+    if kind == "cheat_opp":
+        from .ai.bot_cheat import Bot as B
+        return B(g, seat, wall_lookahead=param or 32,
+                 see_opponents=True, beam=12, rollout=False)
+    if kind == "cheat_full":
+        from .ai.bot_cheat import Bot as B
+        return B(g, seat, wall_lookahead=-1, see_opponents=True,
+                 beam=param or 4, rollout=True)
+    return Bot(g, seat)
+
+
+def _gang_kind(g: Game, seat: int, tile: int) -> str:
+    if g.players[seat].hand.count(tile) == 4:
+        return "an"
+    return "bu"
+
+
 def _record_decision(g: Game, actual_tile: int):
     """记录我的出牌决策点(用于赛后检讨)
     出牌前调用: 记录手牌快照 + 分析器推荐 + 实际选择"""
@@ -69,13 +101,21 @@ def _record_decision(g: Game, actual_tile: int):
 
 def run_bots_until_human(g: Game):
     """自动推进 AI 回合, 直到轮到人类或游戏结束"""
-    bots = {i: Bot(g, i) for i in range(4) if i != g.human_seat}
+    bots = {i: _make_ai_bot(g, i) for i in range(4) if i != g.human_seat}
     guard = 0
     while g.phase != "game_over" and guard < 300:
         guard += 1
         if g.phase == "discard_wait":
             if g.turn == g.human_seat:
                 break
+            gang_taken = False
+            for tile in g._gang_options(g.turn):
+                if bots[g.turn].decide_gang(tile, _gang_kind(g, g.turn, tile)):
+                    r = g.action_gang(g.turn, tile)
+                    gang_taken = True
+                    break
+            if gang_taken:
+                continue
             r = g.action_discard(g.turn, bots[g.turn].choose_discard())
         elif g.phase == "react_wait":
             # 人类优先响应
@@ -97,6 +137,8 @@ def run_bots_until_human(g: Game):
 
 class NewGameReq(BaseModel):
     dealer: int = 0
+    bot_kind: str | None = None
+    bot_param: int | None = None
 
 
 class DiscardReq(BaseModel):
@@ -112,6 +154,11 @@ def new_game(req: NewGameReq | None = None):
     g = Game(human_seat=0)
     if req:
         g.dealer = req.dealer
+        _session["bot_kind"] = req.bot_kind
+        _session["bot_param"] = req.bot_param
+    else:
+        _session["bot_kind"] = None
+        _session["bot_param"] = None
     _session["game"] = g
     _session["review_log"] = []
     # 若庄家不是人类, 先推进

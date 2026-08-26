@@ -34,10 +34,13 @@ def _make(bot_version, g, i):
                  horizon=int(os.environ.get("V4_H", 10)))
     return B(g, i)
 
-from .features_v2 import encode_state
+from .features_v2 import encode_state, FEAT_DIM as FEAT_DIM_V2
+from .features_v3 import encode_state as encode_state_v3, FEAT_DIM as FEAT_DIM_V3
 
 
-def play_one(seed: int, bot_version: int = 1):
+def play_one(seed: int, bot_version: int = 1, feat_version: int = 2):
+    enc = encode_state_v3 if feat_version == 3 else encode_state
+    feat_dim = FEAT_DIM_V3 if feat_version == 3 else FEAT_DIM_V2
     g = Game(seed=seed, human_seat=-1)
     bots = {i: _make(bot_version, g, i) for i in range(4)}
     records = []  # (seat, feat, act)
@@ -47,7 +50,7 @@ def play_one(seed: int, bot_version: int = 1):
         guard += 1
         if g.phase == "discard_wait":
             seat = g.turn
-            feat = encode_state(g, seat)
+            feat = enc(g, seat)
             tile = bots[seat].choose_discard()
             records.append((seat, feat, tile))
             g.action_discard(seat, tile)
@@ -66,7 +69,7 @@ def play_one(seed: int, bot_version: int = 1):
     scores = np.array([p.score_delta for p in g.players], dtype=np.float32)
     n = len(records)
     feats = np.stack([r[1] for r in records]).astype(np.float32) \
-        if records else np.zeros((0, 628), dtype=np.float32)
+        if records else np.zeros((0, feat_dim), dtype=np.float32)
     seats = np.array([r[0] for r in records], dtype=np.int64)
     acts = np.array([r[2] for r in records], dtype=np.int64)
     rets = np.array([scores[r[0]] for r in records], dtype=np.float32)
@@ -74,8 +77,8 @@ def play_one(seed: int, bot_version: int = 1):
 
 
 def _w(args):
-    seed, bot_version = args if isinstance(args, tuple) else (args, 1)
-    return play_one(seed, bot_version)
+    seed, bot_version, feat_version = args
+    return play_one(seed, bot_version, feat_version)
 
 
 def main():
@@ -86,12 +89,13 @@ def main():
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--out", type=str, default="models/offline_data.npz")
     ap.add_argument("--bot-version", type=int, default=1)
+    ap.add_argument("--feat-version", type=int, default=2, choices=[2, 3])
     args = ap.parse_args()
 
     t0 = time.time()
     with mp.Pool(min(args.workers, args.games)) as pool:
         results = list(pool.imap_unordered(
-            _w, [(s, args.bot_version) for s in
+            _w, [(s, args.bot_version, args.feat_version) for s in
                  range(args.seed0, args.seed0 + args.games)],
             chunksize=max(1, args.games // args.workers // 4)))
     feats = np.concatenate([r[0] for r in results])
