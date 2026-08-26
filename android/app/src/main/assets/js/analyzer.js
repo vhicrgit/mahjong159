@@ -78,7 +78,10 @@ class Analyzer {
   analyzeHand() {
     const p = this.game.players[this.seat];
     const counts = countsFromTiles(p.hand);
-    const s = shanten(counts);
+    const nMelds = p.melds.length;
+    // 副露感知: 直接对副露后的 11/10 张暗牌调 shanten() 会高估约 2*副露数,
+    // 与 backend/analysis/analyzer.py 保持一致
+    const s = shantenWithMelds(counts, nMelds);
     const result = {
       shanten: s,
       is_ting: s === 0,
@@ -99,23 +102,56 @@ class Analyzer {
     return result;
   }
 
+  /**
+   * 有效进张(广义进张): 听牌时=听口; 未听牌时=能降低向听的进张。
+   *
+   * 修复旧缺陷: 旧版进张取自 discardOptions 的 waits, 而 waits 仅在向听=0
+   * 时非空, 导致非听牌局面下所有候选牌的进张项恒为 0, 打分退化成
+   * "-100*向听 - 30*风险", 唯一区分依据变成放杠风险。而风险按"外面还剩几
+   * 张"估算: 手里持一对 -> 外面剩 2 张 -> 风险 0.25; 单张 -> 外面剩 3 张 -> 风险 0.55,
+   * 于是系统性地推荐"拆对子/打将"。实测 386 个非听牌局面中 72.5% 如此。
+   *
+   * 修法与后端 v10/v31 同口径: 任意向听下都计算有效进张。
+   */
+  effectiveDraws(counts, nMelds, s) {
+    const out = [];
+    for (let w = 0; w < TILE_COUNT; w++) {
+      if (counts[w] >= 4) continue;
+      counts[w]++;
+      const ok = (s === 0) ? isWin(counts)
+        : shantenWithMelds(counts, nMelds) < s;
+      counts[w]--;
+      if (ok) out.push(w);
+    }
+    return out;
+  }
+
   analyzeDiscards() {
     const p = this.game.players[this.seat];
-    const counts = countsFromTiles(p.hand);
-    const opts = discardOptions(counts);
+    const counts = p.handCounts();
+    const nMelds = p.melds.length;
     const rem = this.remainingCounts();
     const out = [];
-    for (const o of opts) {
-      const t = o.tile;
+    for (let t = 0; t < TILE_COUNT; t++) {
+      if (counts[t] <= 0) continue;
+      counts[t]--;
+      const s = shantenWithMelds(counts, nMelds);
+      const waits = s === 0 ? waitingTiles(counts) : [];
+      const draws = this.effectiveDraws(counts, nMelds, s);
+      counts[t]++;
       const risk = this.gangRisk(t);
-      const waitRemains = o.waits.reduce((sum, w) => sum + rem[w], 0);
-      const score = -100 * o.shanten + 3 * waitRemains - 30 * risk;
+      const waitRemains = waits.reduce((sum, w) => sum + rem[w], 0);
+      const ukeire = draws.reduce((sum, w) => sum + rem[w], 0);
+      // 综合分: 向听小优先 >> 有效进张多优先 > 放杠风险低优先
+      // 风险权重从 30 降到 10: 避免风险项反过来压过牌效
+      const score = -100 * s + 3 * ukeire - 10 * risk;
       out.push({
         tile: t,
         name: tileName(t),
-        shanten: o.shanten,
-        waits: o.waits.map(w => ({ tile: w, name: tileName(w), remain: rem[w] })),
+        shanten: s,
+        waits: waits.map(w => ({ tile: w, name: tileName(w), remain: rem[w] })),
         wait_remain: waitRemains,
+        ukeire,
         gang_risk: risk,
         score: Math.round(score * 10) / 10,
       });
