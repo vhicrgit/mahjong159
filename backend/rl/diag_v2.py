@@ -16,7 +16,7 @@ from backend.rl.model import build_model, legal_discard_mask, N_ACTIONS
 from backend.rl.selfplay import generate_dataset
 from backend.rl.train import get_device
 from backend.game.engine import Game
-from backend.ai.bot import Bot
+from backend.ai.bot_v1 import Bot
 from backend.rl.features_v2 import encode_state
 
 

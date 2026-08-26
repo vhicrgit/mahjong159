@@ -10,8 +10,8 @@
 """
 
 from ..rules.tiles import TILE_COUNT, tile_suit, tile_rank, is_159, tile_short
-from ..rules.win import shanten, is_win
-from ..rules.ting import waiting_tiles, discard_options
+from ..rules.win import shanten_with_melds
+from ..rules.ting import waiting_tiles
 
 RED = 27
 TOTAL_PER_TILE = 4
@@ -122,10 +122,11 @@ class Analyzer:
 
     # ---------- 主分析 ----------
     def analyze_hand(self) -> dict:
-        """分析我当前手牌(13张状态, 未摸牌)"""
+        """分析我当前手牌(13张等价状态, 未摸牌)。副露感知。"""
         p = self.game.players[self.seat]
         counts = p.hand_counts
-        s = shanten(counts)
+        n_melds = len(p.melds)
+        s = shanten_with_melds(counts, n_melds)
         result = {
             "shanten": s,
             "is_ting": s == 0,
@@ -137,7 +138,7 @@ class Analyzer:
                           for o in self.game.players if o.seat != self.seat],
         }
         if s == 0:
-            waits = waiting_tiles(counts)
+            waits = waiting_tiles(counts)  # is_win 对副露手(3n+1暗牌)同样正确
             rem = self._remaining_counts()
             result["waits"] = [
                 {"tile": w, "name": tile_short(w), "remain": rem[w]}
@@ -147,25 +148,30 @@ class Analyzer:
         return result
 
     def analyze_discards(self) -> list[dict]:
-        """14张状态: 分析打出每张牌的后果, 给出综合建议排序"""
+        """14张等价状态: 分析打出每张牌的后果, 给出综合建议排序。副露感知。"""
         p = self.game.players[self.seat]
         counts = p.hand_counts
-        opts = discard_options(counts)
+        n_melds = len(p.melds)
         rem = self._remaining_counts()
         out = []
-        for o in opts:
-            t = o["tile"]
+        for t in range(TILE_COUNT):
+            if counts[t] <= 0:
+                continue
+            counts[t] -= 1
+            s = shanten_with_melds(counts, n_melds)
+            waits = waiting_tiles(counts) if s == 0 else []
+            counts[t] += 1
             risk = self.gang_risk(t)
             # 剩余进张(用未出现数估计, 更准确)
-            wait_remains = sum(rem[w] for w in o["waits"])
+            wait_remains = sum(rem[w] for w in waits)
             # 综合分: 向听数小优先, 进张多优先, 风险低优先
-            score = -100 * o["shanten"] + 3 * wait_remains - 30 * risk
+            score = -100 * s + 3 * wait_remains - 30 * risk
             out.append({
                 "tile": t,
                 "name": tile_short(t),
-                "shanten": o["shanten"],
+                "shanten": s,
                 "waits": [{"tile": w, "name": tile_short(w),
-                           "remain": rem[w]} for w in o["waits"]],
+                           "remain": rem[w]} for w in waits],
                 "wait_remain": wait_remains,
                 "gang_risk": risk,
                 "score": round(score, 1),

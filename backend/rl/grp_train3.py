@@ -23,7 +23,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..game.engine import Game
-from ..ai.bot import Bot
+from ..ai.bot_v1 import Bot
 from .features_v2 import encode_state
 
 FEAT_DIM_V2 = 628

@@ -103,6 +103,15 @@ def _make_bot(kind, game, seat, param=0):
     if kind == "v28":
         from .bot_v28 import Bot as B
         return B(game, seat)
+    if kind == "v29":
+        from .bot_v29 import Bot as B
+        return B(game, seat)
+    if kind == "v30":
+        from .bot_v30 import Bot as B
+        return B(game, seat)
+    if kind == "v31":
+        from .bot_v31 import Bot as B
+        return B(game, seat)
     if kind == "target":
         from .bot_target import Bot as B
         return B(game, seat)
@@ -155,7 +164,7 @@ def play_one(args):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bot", type=str, default="v2",
-                    choices=["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "target", "oracle", "pimc",
+                    choices=["v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31", "target", "oracle", "pimc",
                              "cheat_full", "cheat_wall", "cheat_opp"])
     ap.add_argument("--games", type=int, default=2000)
     ap.add_argument("--procs", type=int, default=100)

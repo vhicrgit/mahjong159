@@ -1,3 +1,3 @@
-"""Current rule AI: v10 generalized-ukeire policy."""
+"""Current rule AI: v31 = v10 + meld-aware shanten (fixes never-call bug)."""
 
-from .bot_v10 import Bot
+from .bot_v31 import Bot

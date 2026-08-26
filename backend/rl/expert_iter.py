@@ -22,7 +22,7 @@ from .train import get_device, train_bc
 from .evaluate import play_eval_game
 from .features_v2 import encode_state
 from ..game.engine import Game
-from ..ai.bot import Bot
+from ..ai.bot_v1 import Bot
 from ..rules.win import shanten
 from ..rules.ting import discard_options
 

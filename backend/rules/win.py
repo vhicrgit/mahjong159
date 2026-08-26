@@ -86,6 +86,38 @@ def shanten_cached(tiles_counts: tuple) -> int:
     return shanten(list(tiles_counts))
 
 
+def shanten_with_melds(concealed_counts, n_melds: int) -> int:
+    """副露感知向听: 已有 n_melds 个副露(碰/杠各算1个完成面子)时,
+    对剩余暗牌的向听数。
+
+    实现: 用 n_melds 个"虚拟刻子"(挑暗牌中张数为0的普通牌)把手补回
+    13/14 张等价形态, 复用 shanten 的 13 张公式。直接对 10/11 张暗牌调
+    shanten() 会高估约 2*n_melds 向听(公式硬编码 8=2*4), 历史上导致
+    规则Bot 判定"碰/杠必然变差"而从不鸣牌。
+    """
+    if n_melds <= 0:
+        return shanten(list(concealed_counts))
+    c = list(concealed_counts)
+    pad = 0
+    for t in range(27):
+        if pad == n_melds:
+            break
+        # 虚拟刻子不能与真实手牌(或已填充牌)形成顺子交互: 同花色距离>=3
+        lo = t - t % 9
+        if any(c[u] for u in range(max(lo, t - 2), min(lo + 9, t + 3))):
+            continue
+        c[t] = 3
+        pad += 1
+    if pad < n_melds:  # 兜底: 罕见情况下退化为任意空位填充
+        for t in range(27):
+            if pad == n_melds:
+                break
+            if c[t] == 0:
+                c[t] = 3
+                pad += 1
+    return shanten(c)
+
+
 def is_win(tiles_counts: list[int]) -> bool:
     """判断计数向量(张数 mod 3 == 2)是否可胡牌(含红中癞子)
 

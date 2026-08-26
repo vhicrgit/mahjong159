@@ -3,7 +3,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from backend.game.engine import Game
-from backend.ai.bot import Bot
+from backend.ai.bot_v1 import Bot
 from backend.rl.hybrid_bot import HybridBot
 
 

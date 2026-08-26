@@ -15,7 +15,7 @@ import numpy as np
 import torch
 
 from ..game.engine import Game
-from ..ai.bot import Bot
+from ..ai.bot_v1 import Bot
 from .features_v2 import encode_state
 from .model import legal_discard_mask
 

@@ -37,10 +37,13 @@ def current_game() -> Game:
 
 
 def _make_ai_bot(g: Game, seat: int):
-    kind = _session.get("bot_kind") or os.environ.get("MAHJONG_BOT", "v10")
+    kind = _session.get("bot_kind") or os.environ.get("MAHJONG_BOT", "v31")
     param = int(_session.get("bot_param") or os.environ.get("MAHJONG_BOT_PARAM", "0"))
-    if kind in ("v10", "normal"):
+    if kind in ("v31", "normal"):
         return Bot(g, seat)
+    if kind == "v10":
+        from .ai.bot_v10 import Bot as B
+        return B(g, seat)
     if kind == "v1":
         from .ai.bot_v1 import Bot as B
         return B(g, seat)
