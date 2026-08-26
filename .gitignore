@@ -15,3 +15,14 @@ android/build/
 android/app/build/
 **/build/
 *.apk
+
+# IDE
+.qoder/
+
+# 本地临时脚本与模拟输出(不入库)
+**/_sim.js
+**/_sim_report.js
+**/_sim_out.txt
+**/_merged.js
+**/_verify.js
+**/_winrate.js

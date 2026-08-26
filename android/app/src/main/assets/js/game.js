@@ -8,8 +8,38 @@ let lastAnalysis = null;
 let displayHand = [];         // [{uid, tile}] 显示手牌(可拖拽排序)
 let uidCounter = 1;
 let lastLogLen = 0;           // 用于音效: 跟踪新增日志
-const AI_DELAY = 500;
+const AI_DELAY = 200;   // AI 回合间隔(搜索本身也需时间, 不必额外等待太久)
 const SEAT_NAMES = ["我", "下家", "对家", "上家"];
+
+// 对手阵容: seat -> {昵称, 工厂函数, 说明}
+// shanten 优化后参数已拉到 Python 同级强度(实测老鸟 ~60ms/次, 挂哥 ~120ms/次)
+const ROSTER = {
+  1: { nick: "菜鸟", desc: "规则Bot v1: 牌效优先",
+       make: (g, s) => new Bot(g, s) },
+  2: { nick: "老鸟", desc: "规则Bot v4: 解析+搜索精修",
+       make: (g, s) => new BotV4(g, s, { worlds: 24, beam: 6, horizon: 6 }) },
+  3: { nick: "挂哥", desc: "作弊Bot: 可见牌堆",
+       make: (g, s) => new BotOracle(g, s, { beam: 12 }) },
+};
+let aiBots = {};   // seat -> bot 实例(每局初始化)
+
+function seatNick(seat) {
+  return ROSTER[seat] ? ROSTER[seat].nick : "我";
+}
+
+// 显示某家"思考中"(同步搜索前先给反馈, 避免看起来卡死)
+function showThinking(seat) {
+  const el = document.getElementById("status");
+  if (el) el.innerHTML = `<span class='thinking'>${seatLabel(seat)} 思考中...</span>`;
+  const box = document.getElementById("opp-" + seat);
+  if (box) box.classList.add("active");
+}
+
+// 显示用: "下家 菜鸟" / "我"
+function seatLabel(seat) {
+  if (seat === 0) return "我";
+  return SEAT_NAMES[seat] + " " + seatNick(seat);
+}
 
 // ---------- 累计积分 ----------
 function getTotalScores() {
@@ -133,6 +163,9 @@ function newGame() {
   document.getElementById("review-panel").classList.add("hidden");
   document.getElementById("analysis-panel").classList.add("hidden");
   game = new Game(0);
+  // 为每个 AI 座位创建对应的 bot
+  aiBots = {};
+  for (const s of [1, 2, 3]) aiBots[s] = ROSTER[s].make(game, s);
   render();
   refreshAnalysis();
   maybeRunAI();
@@ -143,16 +176,21 @@ function maybeRunAI() {
   if (game.phase === "discard_wait" && game.turn === 0) { render(); return; }
   if (game.phase === "react_wait" && game.pendingActions[0]) { render(); return; }
 
+  // 先把"思考中"画出来(setTimeout 让浏览器先重绘), 再做同步搜索
+  const actor = (game.phase === "discard_wait") ? game.turn
+    : Object.keys(game.pendingActions).map(Number).filter(s => s !== 0)[0];
+  if (actor !== undefined) showThinking(actor);
+
   setTimeout(() => {
     if (!game || game.phase === "game_over") { render(); return; }
     if (game.phase === "discard_wait" && game.turn !== 0) {
-      const bot = new Bot(game, game.turn);
+      const bot = aiBots[game.turn];
       try { game.discard(game.turn, bot.chooseDiscard()); } catch (e) { console.error(e); }
     } else if (game.phase === "react_wait") {
       const seats = Object.keys(game.pendingActions).map(Number).filter(s => s !== 0);
       if (seats.length) {
         const s = seats[0];
-        const bot = new Bot(game, s);
+        const bot = aiBots[s];
         const tile = game.lastDiscard;
         try {
           if (game.pendingActions[s].gang && bot.decideGang(tile, "ming")) game.gang(s);
@@ -173,16 +211,18 @@ function render() {
   syncDisplayHand();
   document.getElementById("wall-info").textContent = "剩" + game.wallRemaining();
 
-  // 对手
+  // 对手(紧凑: 昵称 + 剩余张数 + 副露)
   for (let s = 1; s <= 3; s++) {
     const p = game.players[s];
     const box = document.getElementById("opp-" + s);
-    const hand = box.querySelector(".opp-hand");
+    box.querySelector(".opp-nick").textContent = seatNick(s);
+    box.querySelector(".opp-count").textContent = p.hand.length + "张";
     const melds = box.querySelector(".opp-melds");
-    hand.innerHTML = "";
     melds.innerHTML = "";
-    for (let i = 0; i < p.hand.length; i++) hand.appendChild(makeBackEl("sm"));
     for (const m of p.melds) melds.appendChild(makeMeldEl(m, "sm"));
+    // 当前行动者高亮
+    box.classList.toggle("active",
+      game.phase !== "game_over" && game.turn === s);
   }
 
   // 弃牌(最后一张高亮 + 飞入动画方向)
@@ -215,7 +255,7 @@ function render() {
   } else if (game.phase === "discard_wait" && game.turn === 0) {
     statusEl.innerHTML = "轮到你出牌 <span class='hint-dim'>" + (game.lastAction || "") + "</span>";
   } else if (game.phase === "react_wait" && game.pendingActions[0]) {
-    const who = SEAT_NAMES[game.lastDiscarder];
+    const who = seatLabel(game.lastDiscarder);
     statusEl.innerHTML = `${who} 打出 <b class='hl-tile'>${tileInfo(game.lastDiscard).name}</b>, 你可碰/杠/过`;
   } else {
     statusEl.innerHTML = "对手行动中... <span class='hint-dim'>" + (game.lastAction || "") + "</span>";
@@ -457,7 +497,7 @@ function showResult() {
     detail.textContent = "牌堆剩余不足, 本局流局, 杠分不结算";
     fan.innerHTML = "";
   } else {
-    title.textContent = game.winner === 0 ? "你胡了!" : SEAT_NAMES[game.winner] + " 胡了";
+    title.textContent = game.winner === 0 ? "你胡了!" : seatLabel(game.winner) + " 胡了";
     detail.textContent = (game.winKind === "gangshang" ? "杠上花" : "自摸") +
       " | 中出1/5/9共 " + game.n159 + " 张, 每家赔 " + (game.n159 + 1) + " 分";
     fan.innerHTML = "";
@@ -468,7 +508,7 @@ function showResult() {
     const cls = p.score_delta > 0 ? "score-row win" : "score-row";
     const sd = p.score_delta > 0 ? "+" + p.score_delta : "" + p.score_delta;
     const tt = totals[i] > 0 ? "+" + totals[i] : "" + totals[i];
-    s += `<div class="${cls}"><span>${SEAT_NAMES[i]}</span><span>本局 ${sd} | 累计 ${tt}</span></div>`;
+    s += `<div class="${cls}"><span>${seatLabel(i)}</span><span>本局 ${sd} | 累计 ${tt}</span></div>`;
   });
   scores.innerHTML = s;
 }
@@ -504,7 +544,7 @@ function renderAnalysis(data) {
   for (const o of h.opponents) {
     const pct = Math.round(o.threat * 100);
     const cls = o.threat > 0.6 ? "risk-high" : (o.threat > 0.35 ? "risk-mid" : "risk-low");
-    html += `<div class="ana-row">${SEAT_NAMES[o.seat]}: ${pct}%</div>`;
+    html += `<div class="ana-row">${seatLabel(o.seat)}: ${pct}%</div>`;
     html += `<div class="risk-bar"><div class="risk-fill ${cls}" style="width:${pct}%"></div></div>`;
   }
   html += "</div>";

@@ -20,6 +20,7 @@ import os
 
 from .game.engine import Game
 from .ai.bot import Bot
+from .ai import roster
 from .analysis.analyzer import Analyzer
 from .rules.tiles import tile_name
 
@@ -34,6 +35,15 @@ def current_game() -> Game:
     if g is None:
         raise HTTPException(400, "没有进行中的对局, 请先开新局")
     return g
+
+
+def state_with_names(g: Game) -> dict:
+    """公开状态 + 每个座位的 AI 名字/说明(供前端显示对手身份)"""
+    st = g.public_state(0)
+    for p in st["players"]:
+        p["name"] = roster.seat_name(p["seat"])
+        p["bot_desc"] = roster.seat_desc(p["seat"])
+    return st
 
 
 def _record_decision(g: Game, actual_tile: int):
@@ -69,7 +79,7 @@ def _record_decision(g: Game, actual_tile: int):
 
 def run_bots_until_human(g: Game):
     """自动推进 AI 回合, 直到轮到人类或游戏结束"""
-    bots = {i: Bot(g, i) for i in range(4) if i != g.human_seat}
+    bots = roster.build_bots(g, g.human_seat)
     guard = 0
     while g.phase != "game_over" and guard < 300:
         guard += 1
@@ -117,13 +127,13 @@ def new_game(req: NewGameReq | None = None):
     # 若庄家不是人类, 先推进
     if g.dealer != g.human_seat:
         run_bots_until_human(g)
-    return g.public_state(0)
+    return state_with_names(g)
 
 
 @app.get("/api/state")
 def get_state():
     g = current_game()
-    return g.public_state(0)
+    return state_with_names(g)
 
 
 @app.post("/api/discard")
@@ -135,7 +145,7 @@ def discard(req: DiscardReq):
     except (AssertionError, ValueError) as e:
         raise HTTPException(400, str(e))
     run_bots_until_human(g)
-    return g.public_state(0)
+    return state_with_names(g)
 
 
 @app.post("/api/peng")
@@ -146,7 +156,7 @@ def peng():
     except (AssertionError, ValueError) as e:
         raise HTTPException(400, str(e))
     run_bots_until_human(g)
-    return g.public_state(0)
+    return state_with_names(g)
 
 
 @app.post("/api/gang")
@@ -157,7 +167,7 @@ def gang(req: GangReq):
     except (AssertionError, ValueError) as e:
         raise HTTPException(400, str(e))
     run_bots_until_human(g)
-    return g.public_state(0)
+    return state_with_names(g)
 
 
 @app.post("/api/pass")
@@ -168,7 +178,7 @@ def pass_action():
     except (AssertionError, ValueError) as e:
         raise HTTPException(400, str(e))
     run_bots_until_human(g)
-    return g.public_state(0)
+    return state_with_names(g)
 
 
 @app.get("/api/analyze")

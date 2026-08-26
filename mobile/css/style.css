@@ -30,18 +30,31 @@ html, body {
 }
 .hbtn.primary { background: #e94560; font-weight: bold; }
 
-/* 对手区 */
+/* 对手区(紧凑: 名字 + 剩余张数 + 副露, 不显示牌背避免溢出) */
 #opponents {
-  display: flex; justify-content: space-around;
+  display: flex; gap: 4px;
   padding: 6px 4px; background: #1b4332; flex-shrink: 0;
 }
-.opp-box { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.opp-name {
-  font-size: 11px; color: #ffd166; background: rgba(0,0,0,.4);
-  padding: 2px 8px; border-radius: 8px;
+.opp-box {
+  flex: 1 1 0; min-width: 0; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: rgba(0,0,0,.18); border-radius: 8px; padding: 4px 2px;
 }
-.opp-hand { display: flex; gap: 1px; min-height: 26px; }
-.opp-melds { display: flex; gap: 3px; min-height: 22px; flex-wrap: wrap; justify-content: center; }
+.opp-name {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; max-width: 100%;
+}
+.opp-pos { color: rgba(255,255,255,.55); flex-shrink: 0; }
+.opp-nick {
+  color: #ffd166; font-weight: bold;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.opp-count { font-size: 11px; color: #a8dadc; }
+.opp-melds {
+  display: flex; gap: 2px; min-height: 20px;
+  flex-wrap: wrap; justify-content: center; max-width: 100%;
+}
+.opp-box.active { outline: 2px solid #ffd166; }
 
 /* 牌 */
 .tile {

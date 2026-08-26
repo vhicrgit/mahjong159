@@ -20,30 +20,30 @@
     </div>
   </header>
 
-  <!-- 对手区(顶部横排) -->
+  <!-- 对手区(顶部横排, 紧凑布局) -->
   <div id="opponents">
     <div class="opp-box" id="opp-3">
-      <div class="opp-name">上家</div>
-      <div class="opp-hand"></div>
+      <div class="opp-name"><span class="opp-pos">上家</span><span class="opp-nick"></span></div>
+      <div class="opp-count"></div>
       <div class="opp-melds"></div>
     </div>
     <div class="opp-box" id="opp-2">
-      <div class="opp-name">对家</div>
-      <div class="opp-hand"></div>
+      <div class="opp-name"><span class="opp-pos">对家</span><span class="opp-nick"></span></div>
+      <div class="opp-count"></div>
       <div class="opp-melds"></div>
     </div>
     <div class="opp-box" id="opp-1">
-      <div class="opp-name">下家</div>
-      <div class="opp-hand"></div>
+      <div class="opp-name"><span class="opp-pos">下家</span><span class="opp-nick"></span></div>
+      <div class="opp-count"></div>
       <div class="opp-melds"></div>
     </div>
   </div>
 
   <!-- 弃牌区 -->
   <div id="discards-area">
-    <div class="discard-box" id="discard-3"><div class="dlabel">上家</div><div class="discards"></div></div>
-    <div class="discard-box" id="discard-2"><div class="dlabel">对家</div><div class="discards"></div></div>
-    <div class="discard-box" id="discard-1"><div class="dlabel">下家</div><div class="discards"></div></div>
+    <div class="discard-box" id="discard-3"><div class="dlabel">上家 挂哥</div><div class="discards"></div></div>
+    <div class="discard-box" id="discard-2"><div class="dlabel">对家 老鸟</div><div class="discards"></div></div>
+    <div class="discard-box" id="discard-1"><div class="dlabel">下家 菜鸟</div><div class="discards"></div></div>
     <div class="discard-box" id="discard-0"><div class="dlabel">我</div><div class="discards"></div></div>
   </div>
 
@@ -97,6 +97,7 @@
 <script src="js/tileRenderer.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/bot.js"></script>
+<script src="js/bots_adv.js"></script>
 <script src="js/analyzer.js"></script>
 <script src="js/game.js"></script>
 </body>
