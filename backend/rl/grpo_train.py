@@ -10,7 +10,7 @@
 
 防退化设计(对应本项目 PPO/AWR 全退化的历史教训):
 - 共享世界消运气噪声; 塑形奖励消翻牌噪声
-- KL 锚定参考策略; 小 lr; 优势裁剪
+- KL 锚定参考策略; 小 lr; 优势裁剪; sd 下限缩幅(低区分度组防噪声放大)
 - 每 eval_every 轮评估(vs 3×v1), 只保留最优 checkpoint
 
 用法:
@@ -204,13 +204,26 @@ class GRPOTrainer:
                                   args.seed0 + it * 7919 + si, args.worlds,
                                   args.step_penalty))
                     meta.append((si, tile))
-            if args.rollout == "nn":
+            if args.rollout in ("nn", "jax"):
                 cand_lists = {}
                 for (si, tile) in meta:
                     cand_lists.setdefault(si, []).append(tile)
                 cand_lists = [cand_lists[si] for si in range(len(snaps))]
+            if args.rollout == "nn":
                 self.model.eval()
                 r_map = self._rollout_nn(snaps, cand_lists)
+            elif args.rollout == "jax":
+                from backend.jax159.rollout import (build_world_states,
+                                                    rollout_jax)
+                from backend.jax159.jax_net import JaxNet
+                self.model.eval()
+                sd = {k: v.detach().cpu().numpy()
+                      for k, v in self.model.state_dict().items()}
+                net = JaxNet.from_dict(sd)
+                sts, meta2, _ = build_world_states(
+                    snaps, cand_lists, args.worlds,
+                    args.seed0 + it * 7919)
+                r_map = rollout_jax(sts, meta2, net, args.step_penalty)
             else:
                 with mp.Pool(args.procs) as pool:
                     rets = pool.map(_rollout_worker, tasks, chunksize=1)
@@ -223,9 +236,12 @@ class GRPOTrainer:
                 vals = np.array(list(tile_r.values()))
                 tiles = list(tile_r.keys())
                 mu, sd = vals.mean(), vals.std()
+                # sd 下限: 低区分度组(spread≈0)的回报差在 16 世界均值
+                # 估计误差(~0.9)内, 归一化会放大成虚高优势, 按下限压幅
+                sd_eff = max(sd, args.min_sd)
                 spreads.append(vals.max() - vals.min())
                 for t, v in zip(tiles, vals):
-                    a = (v - mu) / (sd + 1e-6)
+                    a = (v - mu) / (sd_eff + 1e-6)
                     a = float(np.clip(a, -args.adv_clip, args.adv_clip))
                     A_list.append(a)
                     feat_rows.append(feats[si])
@@ -297,10 +313,13 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-5)
     ap.add_argument("--kl-beta", type=float, default=0.02)
     ap.add_argument("--adv-clip", type=float, default=3.0)
+    ap.add_argument("--min-sd", type=float, default=1.0,
+                    help="优势归一化 sd 下限(塑形奖励单位): 低区分度组不再放大噪声")
     ap.add_argument("--inner-epochs", type=int, default=2)
     ap.add_argument("--feat-version", type=int, default=3, choices=[2,3])
-    ap.add_argument("--rollout", type=str, default="v1", choices=["v1", "nn"],
-                    help="推演策略: v1规则(快,有风格偏差) 或 nn当前策略(自洽)")
+    ap.add_argument("--rollout", type=str, default="v1",
+                    choices=["v1", "nn", "jax"],
+                    help="推演策略: v1规则 / nn当前策略 / jax环境+nn(最快)")
     ap.add_argument("--step-penalty", type=float, default=0.02)
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=400)

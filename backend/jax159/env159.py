@@ -77,15 +77,18 @@ ALL_SPLITS = [(r0, r1, r2)
 
 
 def _is_win_hand(hand: jax.Array) -> jax.Array:
-    """hand: (28,) int8 计数(3n+2)。查表判胡。"""
+    """hand: (28,) 或 (B,28) int8 计数(3n+2)。查表判胡。"""
     M0, M1 = _M0, _M1
+    single = hand.ndim == 1
+    if single:
+        hand = hand[None, :]
     c = hand.astype(jnp.int32)
-    c0 = (c[0:9] * _POW5).sum()
-    c1 = (c[9:18] * _POW5).sum()
-    c2 = (c[18:27] * _POW5).sum()
-    red = hand[RED].astype(jnp.int32)
+    c0 = (c[:, 0:9] * _POW5).sum(1)
+    c1 = (c[:, 9:18] * _POW5).sum(1)
+    c2 = (c[:, 18:27] * _POW5).sum(1)
+    red = c[:, 27]
 
-    win = jnp.bool_(False)
+    win = jnp.zeros((c.shape[0],), dtype=jnp.bool_)
     for r0, r1, r2 in ALL_SPLITS:
         used = r0 + r1 + r2
         ok = used <= red
@@ -97,7 +100,7 @@ def _is_win_hand(hand: jax.Array) -> jax.Array:
         win = win | (ok & (
             ((left % 3 == 0) & pair_in_suit) |
             ((left == 2) & a0 & a1 & a2)))
-    return win
+    return win[0] if single else win
 
 
 def _settle(state: State, winner, win_kind) -> State:
