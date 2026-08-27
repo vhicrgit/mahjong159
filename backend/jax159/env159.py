@@ -72,6 +72,10 @@ class State(NamedTuple):
     draws: jax.Array         # int16 总摸牌数(步数惩罚用)
 
 
+ALL_SPLITS = [(r0, r1, r2)
+              for r0 in range(5) for r1 in range(5) for r2 in range(5) if r0 + r1 + r2 <= 4]
+
+
 def _is_win_hand(hand: jax.Array) -> jax.Array:
     """hand: (28,) int8 计数(3n+2)。查表判胡。"""
     M0, M1 = _M0, _M1
@@ -82,20 +86,17 @@ def _is_win_hand(hand: jax.Array) -> jax.Array:
     red = hand[RED].astype(jnp.int32)
 
     win = jnp.bool_(False)
-    # 枚举三花色红中用量 (r0,r1,r2), 剩红 left 单独处理(成刻/做将)
-    for r0 in range(5):
-        for r1 in range(5):
-            for r2 in range(5):
-                used = r0 + r1 + r2
-                left = red - used
-                ok_used = used <= red
-                a0, b0 = M0[c0, r0], M1[c0, r0]
-                a1, b1 = M0[c1, r1], M1[c1, r1]
-                a2, b2 = M0[c2, r2], M1[c2, r2]
-                pair_in_suit = (b0 & a1 & a2) | (a0 & b1 & a2) | (a0 & a1 & b2)
-                case_suit_pair = (left % 3 == 0) & pair_in_suit
-                case_red_pair = (left == 2) & a0 & a1 & a2
-                win = win | (ok_used & (case_suit_pair | case_red_pair))
+    for r0, r1, r2 in ALL_SPLITS:
+        used = r0 + r1 + r2
+        ok = used <= red
+        left = red - used
+        a0, b0 = M0[c0, r0], M1[c0, r0]
+        a1, b1 = M0[c1, r1], M1[c1, r1]
+        a2, b2 = M0[c2, r2], M1[c2, r2]
+        pair_in_suit = (b0 & a1 & a2) | (a0 & b1 & a2) | (a0 & a1 & b2)
+        win = win | (ok & (
+            ((left % 3 == 0) & pair_in_suit) |
+            ((left == 2) & a0 & a1 & a2)))
     return win
 
 
