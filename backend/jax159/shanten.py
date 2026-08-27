@@ -29,6 +29,7 @@ def load_front_table(path=None):
 ALL_SPLITS = [(r0, r1, r2)
               for r0 in range(5) for r1 in range(5) for r2 in range(5)
               if r0 + r1 + r2 <= 4]
+SPLIT_ARR = jnp.array(ALL_SPLITS, dtype=jnp.int32)  # (35,3) 静态
 
 
 def _merge_score(F0, F1, F2, need, red, ok):
@@ -79,12 +80,17 @@ def shanten_batch(hands) -> jax.Array:
     total = c.sum(1)
     need = jnp.clip((total - 1) // 3, 1, 4)
 
-    best = jnp.full((hands.shape[0],), 99, dtype=jnp.int32)
-    for r0, r1, r2 in ALL_SPLITS:
+    B = hands.shape[0]
+    best = jnp.full((B,), 99, dtype=jnp.int32)
+
+    def body(carry, split):
+        r0, r1, r2 = split
         ok = (r0 + r1 + r2) <= red
         F0 = FRONT[c0, r0]
         F1 = FRONT[c1, r1]
         F2 = FRONT[c2, r2]
         s = _merge_score(F0, F1, F2, need, red, ok)
-        best = jnp.minimum(best, s.min(axis=(1, 2, 3)))
+        return jnp.minimum(carry, s.min(axis=(1, 2, 3))), None
+
+    best, _ = jax.lax.scan(body, best, SPLIT_ARR)
     return best

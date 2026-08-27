@@ -46,3 +46,23 @@ class JaxNet:
         obj.hidden = obj.params["input_proj.weight"].shape[0]
         obj.feat_dim = obj.params["input_proj.weight"].shape[1]
         return obj
+
+
+def q_forward(params: dict, x: jax.Array) -> jax.Array:
+    """函数式前向: params 为权重 dict(显式参数, 更新不触发重编译)。"""
+    w0 = params["input_proj.weight"]
+    b0 = params["input_proj.bias"]
+    h = jax.nn.relu(x @ w0.T + b0)
+    i = 0
+    while True:
+        w1 = params.get(f"blocks.{i}.fc1.weight")
+        if w1 is None:
+            break
+        b1 = params[f"blocks.{i}.fc1.bias"]
+        w2 = params[f"blocks.{i}.fc2.weight"]
+        b2 = params[f"blocks.{i}.fc2.bias"]
+        h = jax.nn.relu(jax.nn.relu(h @ w1.T + b1) @ w2.T + b2 + h)
+        i += 1
+    wq = params["q_head.weight"]
+    bq = params["q_head.bias"]
+    return h @ wq.T + bq

@@ -16,7 +16,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from .convert import state_from_game, batch_states, slice_state
-from .env159 import State, step_jit, legal_jit, load_win_tables, P_OVER
+from .env159 import State, step_jit, legal_jit, load_win_tables, P_OVER, P_REACT
 from .features import encode_obs
 from .shanten import load_front_table
 
@@ -34,7 +34,7 @@ def _get_obs_jit():
 
 
 def _get_step_jit():
-    return jax.jit(step_jit)
+    return jax.vmap(step_jit)  # 批量: vmap 单状态 step
 
 
 def build_world_states(snaps, cand_lists, n_worlds, world_seed):
@@ -73,50 +73,29 @@ def _inject(snap, hands, wall):
 
 
 def rollout_jax(sts: State, meta, net, step_penalty: float,
-                max_steps: int = 200, feat_chunk: int = 512):
-    """驱动批量状态到终局。net: JaxNet(特征 628)。
-    返回 per-(si,tile) 的平均塑形得分 dict。"""
+                max_steps: int = 200):
+    """全 jit 推演: 一次 while_loop 跑到终局, 返回 per-(si,tile) 平均塑形得分。
+    net: JaxNet(其 params 作为显式参数, 更新不触发重编译)。"""
     load_win_tables()
     load_front_table()
-    obs_jit = _get_obs_jit()
-    step_j = _get_step_jit()
-    legal_j = jax.jit(legal_jit)  # 单状态版; 批量用 vmap
-
+    # 分块调用 jit 推演(每块形状静态, 峰值内存可控; 编译一次)
     B = sts.hands.shape[0]
-    done = jnp.zeros(B, dtype=jnp.bool_)
-    draws = jnp.zeros(B, dtype=jnp.float32)
-    n159 = jnp.zeros(B, dtype=jnp.int32)
-    winner = jnp.full(B, -1, dtype=jnp.int32)
-
-    for _ in range(max_steps):
-        if bool(done.all()):
-            break
-        # 特征 + 合法掩码 + JAX 推理(全部留在 GPU; 特征分块控编译图规模)
-        B = sts.hands.shape[0]
-        feat_parts = []
-        for c0 in range(0, B, feat_chunk):
-            c1 = min(c0 + feat_chunk, B)
-            feat_parts.append(obs_jit(slice_state(sts, c0, c1),
-                                      sts.turn.astype(jnp.int8)[c0:c1]))
-        feats = jnp.concatenate(feat_parts, axis=0)
-        legal = jax.vmap(legal_j)(sts)[:, :28]  # 推演只用弃牌动作(28维)
-        q = net.q_values(feats)
-        q = jnp.where(legal, q, -1e9)
-        acts = q.argmax(axis=-1).astype(jnp.int32)
-        # react_wait 阶段: 暂不鸣牌, 一律过 (动作0=pass)
-        acts = jnp.where(sts.phase == P_REACT, 0, acts)
-        sts = step_j(sts, acts)
-        # 记录终局
-        over = sts.phase == P_OVER
-        nw = over & ~done
-        if nw.any():
-            winner = winner.at[nw].set(sts.winner.astype(jnp.int32)[nw])
-            n159 = n159.at[nw].set(sts.n_159.astype(jnp.int32)[nw])
-            draws = draws.at[nw].set(sts.draws.astype(jnp.float32)[nw])
-            done = done | nw
-        if done.all():
-            break
-    # 塑形奖励: E[n|墙] 替换实际 n
+    CH = 2048
+    parts = []
+    for c0 in range(0, B, CH):
+        c1 = min(c0 + CH, B)
+        part, _ = _rollout_jit(slice_state(sts, c0, c1), net.params,
+                               step_penalty, max_steps)
+        parts.append(part)
+    if len(parts) == 1:
+        sts = parts[0]
+    else:
+        sts = State(**{f: jnp.concatenate([getattr(p, f) for p in parts],
+                                          axis=0)
+                       for f in State._fields})
+    winner = sts.winner.astype(jnp.int32)
+    n159 = sts.n_159.astype(jnp.int32)
+    draws = sts.draws.astype(jnp.float32)
     shaped = _shaped_from_final(sts, winner, n159, draws, step_penalty)
     r_map = {}
     buf = {}
@@ -125,6 +104,38 @@ def rollout_jax(sts: State, meta, net, step_penalty: float,
     for si, d in buf.items():
         r_map[si] = {t: v for t, v in d.items()}
     return r_map
+
+
+def _rollout_scan_fn(sts, params, step_penalty, max_steps):
+    """单次 jit 的整局推演: while_loop 包住 特征->推理->step 循环。"""
+    from .env159 import P_OVER as _P_OVER, P_REACT as _P_REACT
+    from .env159 import legal_jit as _legal_jit, step_jit as _step_jit
+    from .features import encode_obs as _encode_obs
+    from .jax_net import q_forward
+    B = sts.hands.shape[0]
+
+    def body(carry):
+        sts, done, it = carry
+        feats = _encode_obs(sts, sts.turn.astype(jnp.int8))
+        legal = jax.vmap(_legal_jit)(sts)[:, :28]
+        q = q_forward(params, feats)
+        q = jnp.where(legal, q, -1e9)
+        acts = q.argmax(axis=-1).astype(jnp.int32)
+        acts = jnp.where(sts.phase == _P_REACT, 0, acts)
+        sts = jax.vmap(_step_jit)(sts, acts)
+        done = done | (sts.phase == _P_OVER)
+        return sts, done, it + 1
+
+    def cond(carry):
+        sts, done, it = carry
+        return (it < max_steps) & (~jnp.all(done))
+
+    done0 = jnp.zeros(B, dtype=jnp.bool_)
+    sts, done, it = jax.lax.while_loop(cond, body, (sts, done0, jnp.int32(0)))
+    return sts, it
+
+
+_rollout_jit = jax.jit(_rollout_scan_fn, static_argnames=("max_steps",))
 
 
 def _shaped_from_final(sts, winner, n159, draws, step_penalty):
@@ -137,7 +148,7 @@ def _shaped_from_final(sts, winner, n159, draws, step_penalty):
     # E[n|wall] = 6 × 剩余墙中159密度; 墙不足6张时与引擎一致按0
     idxm = jnp.arange(112)[None, :]
     mask = (idxm >= wall_pos[:, None]) & (idxm < wall_tail[:, None])
-    cnt159 = (IS159[sts.wall[idxm]].astype(jnp.float32) * mask).sum(-1)
+    cnt159 = (IS159[sts.wall].astype(jnp.float32) * mask).sum(-1)
     n_exp = jnp.where(wall_rem >= 6,
                       6.0 * cnt159 / jnp.maximum(wall_rem, 1), 0.0)
     # 实际翻牌 n (只有 winner>=0 有意义)

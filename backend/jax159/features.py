@@ -44,14 +44,14 @@ def encode_obs(sts: State, seats) -> jax.Array:
     # ---------- v1 基础 (512) ----------
     # 1. 手牌 oh4 (28x4)
     my_hand = jnp.take_along_axis(
-        sts.hands, seats[:, None, None].astype(jnp.int32), axis=0)[:, 0]
+        sts.hands, seats[:, None, None].astype(jnp.int32), axis=1)[:, 0]
     f_hand = _oh4(my_hand).reshape(B, 112)
 
     # 2. 自己副露 oh4 (28x4)
     my_meld_t = jnp.take_along_axis(
-        sts.melds_tile, seats[:, None, None].astype(jnp.int32), axis=0)
+        sts.melds_tile, seats[:, None, None].astype(jnp.int32), axis=1)
     my_meld_k = jnp.take_along_axis(
-        sts.melds_kind, seats[:, None, None].astype(jnp.int32), axis=0)
+        sts.melds_kind, seats[:, None, None].astype(jnp.int32), axis=1)
     f_self_meld = _oh4(_meld_counts(my_meld_t, my_meld_k)).reshape(B, 112)
 
     # 3. 对手副露 (3 x 28 x 2)
@@ -60,16 +60,17 @@ def encode_obs(sts: State, seats) -> jax.Array:
         opp_seat = (seats + rel) % 4
         ot = jnp.take_along_axis(
             sts.melds_tile, opp_seat[:, None, None].astype(jnp.int32),
-            axis=0)[:, 0]                                   # (B,4)
+            axis=1)[:, 0]                                   # (B,4)
         ok_ = jnp.take_along_axis(
             sts.melds_kind, opp_seat[:, None, None].astype(jnp.int32),
-            axis=0)[:, 0]
-        peng = (ok_ == 1).any(axis=-1).astype(jnp.float32)  # (B,)
-        gang = ((ok_ >= 2) & (ok_ <= 4)).any(axis=-1).astype(jnp.float32)
+            axis=1)[:, 0]
+        valid = ok_ != 0
+        peng_v = jnp.where(valid & (ok_ == 1), 1.0, 0.0)   # (B,4) 逐槽
+        gang_v = jnp.where(valid & (ok_ >= 2) & (ok_ <= 4), 1.0, 0.0)
         idx = jnp.arange(B)[:, None]
         ot_i = ot.astype(jnp.int32)
-        peng_f = jnp.zeros((B, 28)).at[idx, ot_i].add(peng[:, None])
-        gang_f = jnp.zeros((B, 28)).at[idx, ot_i].add(gang[:, None])
+        peng_f = jnp.zeros((B, 28)).at[idx, ot_i].add(peng_v)
+        gang_f = jnp.zeros((B, 28)).at[idx, ot_i].add(gang_v)
         f_opp.append(peng_f)
         f_opp.append(gang_f)
     f_opp = jnp.concatenate(f_opp, axis=-1)  # (B,168)
@@ -79,7 +80,7 @@ def encode_obs(sts: State, seats) -> jax.Array:
     for rel in range(4):
         seat = (seats + rel) % 4
         dc = jnp.take_along_axis(
-            sts.discards, seat[:, None, None].astype(jnp.int32), axis=0)[:, 0]
+            sts.discards, seat[:, None, None].astype(jnp.int32), axis=1)[:, 0]
         f_disc.append(dc.astype(jnp.float32) / 4.0)
     f_disc = jnp.concatenate(f_disc, axis=-1)  # (B,112)
 
@@ -102,7 +103,7 @@ def encode_obs(sts: State, seats) -> jax.Array:
     for rel in range(1, 4):
         opp_seat = (seats + rel) % 4
         n = jnp.take_along_axis(
-            sts.n_melds, opp_seat[:, None].astype(jnp.int32), axis=0)[:, 0]
+            sts.n_melds, opp_seat[:, None].astype(jnp.int32), axis=1)[:, 0]
         opp_meld_n.append(n.astype(jnp.float32) / 4.0)
     f_glob = jnp.stack([
         wall_ratio, is_dealer, progress, seen159.astype(jnp.float32) / 36.0,
@@ -122,58 +123,50 @@ def encode_obs(sts: State, seats) -> jax.Array:
     visible += my_hand.astype(jnp.int32)
 
     hand14 = my_hand.astype(jnp.int32)          # (B,28) 14张计数
-    # 每张可打牌的打后向听/进张/风险/剩余
-    tile_shanten = []
-    tile_waits = []
-    tile_risk = []
-    tile_remain = []
-    for t in range(28):
-        h13 = hand14.at[:, t].add(-1)           # 打后13张
-        in_hand = hand14[:, t] > 0
-        sh = jnp.where(in_hand, shanten_batch(h13), 99)
-        # 进张: 听牌时 = 听口张数(按剩余计数), 否则 0
-        wc = jnp.zeros(B, dtype=jnp.int32)
-        if True:
-            # 逐张进张判胡
-            waits = []
-            for d in range(28):
-                h14 = h13.at[:, d].add(1)
-                waits.append(_is_win_hand(h14.astype(jnp.int8)))
-            wait_mask = jnp.stack(waits, axis=-1)          # (B,28)
-            rem_after = 4 - h13                              # (B,28)
-            rem_after = jnp.maximum(rem_after, 0)
-            wc = (wait_mask * rem_after).sum(-1)
-        tile_shanten.append(jnp.where(in_hand, sh / 5.0, 1.0))
-        tile_waits.append(jnp.where(in_hand & (sh == 0), wc / 40.0, 0.0))
-        # 风险
-        remain = 4 - visible[:, t]
-        penged = jnp.zeros(B, dtype=jnp.bool_)
-        for rel in range(1, 4):
-            opp_seat = (seats + rel) % 4
-            ot = jnp.take_along_axis(
-                sts.melds_tile, opp_seat[:, None, None].astype(jnp.int32),
-                axis=0)[:, 0]
-            ok_ = jnp.take_along_axis(
-                sts.melds_kind, opp_seat[:, None, None].astype(jnp.int32),
-                axis=0)[:, 0]
-            penged = penged | (ok_ == 1).any(-1)
-        risk = jnp.where(t == RED, 0.0,
-                         jnp.where(penged, 1.0,
-                                   jnp.where(remain >= 3, 0.4,
-                                             jnp.where(remain == 2, 0.2,
-                                                       jnp.where(remain == 1,
-                                                                 0.05, 0.0)))))
-        tile_risk.append(risk)
-        tile_remain.append(jnp.maximum(remain, 0) / 4.0)
-    cur_sh = shanten_batch(hand14) / 5.0
-    ts = jnp.stack(tile_shanten, axis=-1)
-    tw = jnp.stack(tile_waits, axis=-1)
-    tr = jnp.stack(tile_risk, axis=-1)
-    trm = jnp.stack(tile_remain, axis=-1)
-    # best_shanten / total_useful / n_playable
+    eye = jnp.eye(28, dtype=jnp.int32)
+    # 28 候选一次批量: h13 (B,28,28)
+    h13 = hand14[:, None, :] - eye[None, :, :]           # (B,28,28)
+    in_hand = hand14 > 0                                  # (B,28)
+    sh_all = shanten_batch(h13.reshape(-1, 28)).reshape(B, 28)
+    sh = jnp.where(in_hand, sh_all, 99)
+    # 784 win 检查一次批量: H (B,28,28,28)
+    H = (h13[:, :, None, :] + eye[None, None, :, :]).reshape(-1, 28)
+    win_all = _is_win_hand(H.astype(jnp.int8)).reshape(B, 28, 28)
+    rem_after = jnp.maximum(4 - h13, 0)                     # (B,28,28) cand×draw
+    wc = (win_all * rem_after).sum(-1)                      # (B,28)
+    wc = jnp.where(sh == 0, wc, 0)
+    tile_shanten = jnp.where(in_hand, sh / 5.0, 1.0)
+    tile_waits = wc / 40.0
+    # 风险/剩余(28 张批量)
+    visible_t = visible                                   # (B,28)
+    remain = 4 - visible_t
+    penged_tiles = jnp.zeros((B, 28), dtype=jnp.bool_)
+    for rel in range(1, 4):
+        opp_seat = (seats + rel) % 4
+        ot = jnp.take_along_axis(
+            sts.melds_tile, opp_seat[:, None, None].astype(jnp.int32),
+            axis=1)[:, 0]
+        ok_ = jnp.take_along_axis(
+            sts.melds_kind, opp_seat[:, None, None].astype(jnp.int32),
+            axis=1)[:, 0]
+        is_peng = (ok_ == 1).astype(jnp.int32)  # (B,4), 空槽 False
+        penged_tiles = penged_tiles.at[
+            jnp.arange(B)[:, None], ot.astype(jnp.int32)].add(is_peng)
+    risk = jnp.where(jnp.arange(28)[None, :] == RED, 0.0,
+                     jnp.where(penged_tiles, 1.0,
+                               jnp.where(remain >= 3, 0.4,
+                                         jnp.where(remain == 2, 0.2,
+                                                   jnp.where(remain == 1,
+                                                             0.05, 0.0)))))
+    ts = tile_shanten
+    tw = tile_waits
+    tr = risk
+    trm = jnp.maximum(remain, 0) / 4.0
     best_sh = jnp.min(jnp.where(ts < 1.0, ts * 5.0, 99.0), axis=-1) / 5.0
     n_playable = (hand14 > 0).sum(-1).astype(jnp.float32)
-    total_useful = jnp.where(ts * 5.0 == best_sh[:, None] * 5.0, tw * 40.0, 0.0).sum(-1)
+    total_useful = jnp.where(ts * 5.0 == best_sh[:, None] * 5.0,
+                             tw * 40.0, 0.0).sum(-1)
+    cur_sh = shanten_batch(hand14) / 5.0
     extra = jnp.concatenate([
         ts, tw, tr, trm,
         jnp.stack([cur_sh, best_sh, total_useful / 40.0, n_playable / 14.0],

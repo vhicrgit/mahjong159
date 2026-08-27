@@ -74,6 +74,7 @@ class State(NamedTuple):
 
 ALL_SPLITS = [(r0, r1, r2)
               for r0 in range(5) for r1 in range(5) for r2 in range(5) if r0 + r1 + r2 <= 4]
+_SPLIT_ARR = jnp.array(ALL_SPLITS, dtype=jnp.int32)
 
 
 def _is_win_hand(hand: jax.Array) -> jax.Array:
@@ -89,7 +90,9 @@ def _is_win_hand(hand: jax.Array) -> jax.Array:
     red = c[:, 27]
 
     win = jnp.zeros((c.shape[0],), dtype=jnp.bool_)
-    for r0, r1, r2 in ALL_SPLITS:
+
+    def body(carry, split):
+        r0, r1, r2 = split
         used = r0 + r1 + r2
         ok = used <= red
         left = red - used
@@ -97,9 +100,11 @@ def _is_win_hand(hand: jax.Array) -> jax.Array:
         a1, b1 = M0[c1, r1], M1[c1, r1]
         a2, b2 = M0[c2, r2], M1[c2, r2]
         pair_in_suit = (b0 & a1 & a2) | (a0 & b1 & a2) | (a0 & a1 & b2)
-        win = win | (ok & (
-            ((left % 3 == 0) & pair_in_suit) |
-            ((left == 2) & a0 & a1 & a2)))
+        hit = ok & (((left % 3 == 0) & pair_in_suit) |
+                    ((left == 2) & a0 & a1 & a2))
+        return carry | hit, None
+
+    win, _ = jax.lax.scan(body, win, _SPLIT_ARR)
     return win[0] if single else win
 
 
