@@ -31,7 +31,10 @@ import torch.nn.functional as F
 from ..game.engine import Game
 from ..ai.bot_v1 import Bot as BotV1
 from ..ai.bot_v10 import Bot as BotV10
+from ..ai.bot_cheat import Bot as BotCheat
+from ..ai.bot_oracle import Bot as BotOracle
 from ..rules.ting import discard_options
+from ..rules.tiles import tile_name
 from .model import build_model, N_ACTIONS
 from .gen_offline import _shaped_scores
 from .world_grpo import sample_world, rollout_candidate, _v10_scores
@@ -94,6 +97,103 @@ def _rollout_worker(task):
     return float(np.mean(vals))
 
 
+# Bot 注册表: key -> {name, cls, desc, kwargs(传给 Bot.__init__)}
+_BOT_REGISTRY = {
+    "v1":         {"name": "菜鸟", "cls": BotV1,    "kwargs": {},
+                   "desc": "纯向听+进张, 基础规则Bot"},
+    "v10":        {"name": "中鸟", "cls": BotV10,   "kwargs": {},
+                   "desc": "v10 规则, 含触发性向听"},
+    "v31":        {"name": "老鸟", "cls": BotV10,   "kwargs": {},
+                   "desc": "≈v10(两步推演+副露感知向听, 同 v10 类)"},
+    "cheat":      {"name": "挂哥", "cls": BotCheat, "kwargs": {"wall_lookahead": 32,
+                                                                "see_opponents": False},
+                   "desc": "可见牌墙(32 张), 不看对手手牌"},
+    "cheat_full": {"name": "神挂", "cls": BotCheat, "kwargs": {"wall_lookahead": -1,
+                                                                "see_opponents": True,
+                                                                "rollout": True},
+                   "desc": "全信息: 墙+对手手牌+rollout 推演"},
+    "oracle":     {"name": "先知", "cls": BotOracle, "kwargs": {},
+                   "desc": "Beam Search, 已知自己摸牌序列"},
+    "cheat_full_jax": {"name": "神挂JAX", "cls": BotCheat, "kwargs": {},
+                   "desc": "GPU 加速版: 用 rollout_jax(NN)替代 beam 搜索, 后续接入墙特征"},
+}
+
+
+def _rollout_worker_rules(task):
+    """通用规则推演(4 家同策略)。task = (snap, seat, tile, world_seed, n_worlds, step_penalty, bot_type)"""
+    snap, seat, tile, world_seed, n_worlds, step_penalty, bot_type = task
+    rng = random.Random(world_seed)
+    cfg = _BOT_REGISTRY[bot_type]
+    bot_cls = cfg["cls"]
+    bot_kwargs = cfg["kwargs"]
+    vals = []
+    for _ in range(n_worlds):
+        hands, wall = sample_world(snap, rng, hero_seat=seat)
+        g = copy.deepcopy(snap)
+        for s2, h in hands.items():
+            g.players[s2].hand = list(h)
+        g.wall = list(wall)
+        bots = {i: bot_cls(g, i, **bot_kwargs) for i in range(4)}
+        g.action_discard(seat, tile)
+        guard = 0
+        while g.phase != "game_over" and guard < 500:
+            guard += 1
+            if g.phase == "discard_wait":
+                g.action_discard(g.turn, bots[g.turn].choose_discard())
+            elif g.phase == "react_wait":
+                s = list(g.pending_actions.keys())[0]
+                b = bots[s]
+                if g.pending_actions[s].get("gang") and b.decide_gang(g.last_discard, "ming"):
+                    g.action_gang(s)
+                elif g.pending_actions[s].get("peng") and b.decide_peng(g.last_discard):
+                    g.action_peng(s)
+                else:
+                    g.action_pass(s)
+        vals.append(float(_shaped_scores(g, step_penalty)[seat]))
+    return float(np.mean(vals))
+
+
+def _rollout_worker_mixed(task):
+    """混合推演: hero 用 hero_type bot, 对手用 opp_type bot。
+    task = (snap, seat, tile, world_seed, n_worlds, step_penalty, hero_type, opp_type)"""
+    snap, seat, tile, world_seed, n_worlds, step_penalty, hero_type, opp_type = task
+    rng = random.Random(world_seed)
+    hero_cfg = _BOT_REGISTRY[hero_type]
+    opp_cfg = _BOT_REGISTRY[opp_type]
+    vals = []
+    for _ in range(n_worlds):
+        hands, wall = sample_world(snap, rng, hero_seat=seat)
+        g = copy.deepcopy(snap)
+        for s2, h in hands.items():
+            g.players[s2].hand = list(h)
+        g.wall = list(wall)
+        hero_bot = hero_cfg["cls"](g, seat, **hero_cfg["kwargs"])
+        opp_bots = {}
+        for i in range(4):
+            if i != seat:
+                opp_bots[i] = opp_cfg["cls"](g, i, **opp_cfg["kwargs"])
+        g.action_discard(seat, tile)
+        guard = 0
+        while g.phase != "game_over" and guard < 500:
+            guard += 1
+            if g.phase == "discard_wait":
+                if g.turn == seat:
+                    g.action_discard(seat, hero_bot.choose_discard())
+                else:
+                    g.action_discard(g.turn, opp_bots[g.turn].choose_discard())
+            elif g.phase == "react_wait":
+                s = list(g.pending_actions.keys())[0]
+                b = opp_bots.get(s, hero_bot)
+                if g.pending_actions[s].get("gang") and b.decide_gang(g.last_discard, "ming"):
+                    g.action_gang(s)
+                elif g.pending_actions[s].get("peng") and b.decide_peng(g.last_discard):
+                    g.action_peng(s)
+                else:
+                    g.action_pass(s)
+        vals.append(float(_shaped_scores(g, step_penalty)[seat]))
+    return float(np.mean(vals))
+
+
 class GRPOTrainer:
     def __init__(self, args):
         self.args = args
@@ -117,6 +217,17 @@ class GRPOTrainer:
         self.ref.eval()
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=args.lr,
                                      weight_decay=0.01)
+        # 预加载 init 模型(用于 opp_model=init 的对手推演)
+        self._init_net = None
+        if args.init and args.opp_model == "init":
+            ckpt = torch.load(args.init, map_location=self.device,
+                              weights_only=True)
+            sd2 = ckpt["model"] if "model" in ckpt else ckpt
+            if sd2["input_proj.weight"].shape[1] == self.feat_dim:
+                from backend.jax159.jax_net import JaxNet
+                self._init_net = JaxNet.from_dict(
+                    {k: v.detach().cpu().numpy() for k, v in sd2.items()})
+                print(f"init 对手模型已加载: {args.init}")
 
     def _policy_probs(self, feats: np.ndarray) -> np.ndarray:
         x = torch.from_numpy(feats).to(self.device)
@@ -209,23 +320,93 @@ class GRPOTrainer:
                 for (si, tile) in meta:
                     cand_lists.setdefault(si, []).append(tile)
                 cand_lists = [cand_lists[si] for si in range(len(snaps))]
-            if args.rollout == "nn":
-                self.model.eval()
-                r_map = self._rollout_nn(snaps, cand_lists)
-            elif args.rollout == "jax":
-                from backend.jax159.rollout import (build_world_states,
-                                                    rollout_jax)
+            mode = getattr(args, "rollout_mode", None)
+            opp_model = getattr(args, "opp_model", "self")
+            # mode 显式指定优先; 否则回退 --rollout
+            if mode is not None:
+                rollout_mode = mode
+            else:
+                rl = getattr(args, "rollout", "nn")
+                rollout_mode = rl if rl in ("v1", "nn", "jax") else "nn"
+
+            if rollout_mode in ("nn", "jax", "cheat_full_jax", "v10_jax"):
+                # JAX + NN 推演 (cheat_full_jax 暂为 NN 推演的别名, 后续加入墙特征)
+                cand_lists = {}
+                for (si, tile) in meta:
+                    cand_lists.setdefault(si, []).append(tile)
+                cand_lists = [cand_lists[si] for si in range(len(snaps))]
+                from backend.jax159.fast_inject import build_world_states
                 from backend.jax159.jax_net import JaxNet
                 self.model.eval()
                 sd = {k: v.detach().cpu().numpy()
                       for k, v in self.model.state_dict().items()}
                 net = JaxNet.from_dict(sd)
+                t0 = time.time()
                 sts, meta2, _ = build_world_states(
                     snaps, cand_lists, args.worlds,
                     args.seed0 + it * 7919)
-                r_map = rollout_jax(sts, meta2, net, args.step_penalty)
+                t1 = time.time()
+                if opp_model in ("v1", "v10", "cheat"):
+                    # 规则对手: 退化为纯规则推演(混合模式待后续实现)
+                    bot_type = opp_model
+                    tasks_r = [(snaps[si][0], snaps[si][1], tile,
+                                args.seed0 + it * 7919 + si, args.worlds,
+                                args.step_penalty, bot_type)
+                               for (si, tile) in meta]
+                    with mp.Pool(args.procs) as pool:
+                        rets = pool.map(_rollout_worker_rules, tasks_r, chunksize=1)
+                    r_map = {}
+                    for (si, tile), r in zip(meta, rets):
+                        r_map.setdefault(si, {})[tile] = r
+                else:
+                    net_opp = self._init_net if opp_model == "init" else None
+                    if args.rollout_gpus > 1:
+                        from backend.jax159.parallel_rollout import (
+                            start_workers, rollout_parallel)
+                        if not hasattr(self, "_rw"):
+                            self._rw = start_workers(args.rollout_gpus, "")
+                        r_map = rollout_parallel(sts, meta2, net.params,
+                                                 args.step_penalty,
+                                                 self._rw[0], self._rw[1],
+                                                 args.rollout_gpus)
+                    else:
+                        if rollout_mode == "v10_jax":
+                            from backend.jax159.v10_rollout import rollout_v10_jax
+                            r_map = rollout_v10_jax(sts, meta2, args.step_penalty)
+                        else:
+                            from backend.jax159.rollout import rollout_jax
+                            r_map = rollout_jax(sts, meta2, net, args.step_penalty,
+                                                net_opp=net_opp)
+                t2 = time.time()
+                log_f.write(f"  [timing] inject={t1-t0:.1f}s rollout={t2-t1:.1f}s\n")
+                log_f.flush()
+            elif rollout_mode in tuple(_BOT_REGISTRY.keys()):
+                # 规则推演(4 家同策略) 或 混合推演(hero≠opp)
+                opp_is_rule = opp_model in tuple(_BOT_REGISTRY.keys())
+                if opp_is_rule and opp_model != rollout_mode:
+                    # 混合模式: hero=rollout_mode, 对手=opp_model
+                    bot_type = rollout_mode
+                    tasks_r = [(snaps[si][0], snaps[si][1], tile,
+                                args.seed0 + it * 7919 + si, args.worlds,
+                                args.step_penalty, rollout_mode, opp_model)
+                               for (si, tile) in meta]
+                    with mp.get_context("spawn").Pool(args.procs) as pool:
+                        rets = pool.map(_rollout_worker_mixed, tasks_r, chunksize=1)
+                else:
+                    # 纯规则推演(4 家同策略)
+                    bot_type = rollout_mode
+                    tasks_r = [(snaps[si][0], snaps[si][1], tile,
+                                args.seed0 + it * 7919 + si, args.worlds,
+                                args.step_penalty, bot_type)
+                               for (si, tile) in meta]
+                    with mp.Pool(args.procs) as pool:
+                        rets = pool.map(_rollout_worker_rules, tasks_r, chunksize=1)
+                r_map = {}
+                for (si, tile), r in zip(meta, rets):
+                    r_map.setdefault(si, {})[tile] = r
             else:
-                with mp.Pool(args.procs) as pool:
+                # 旧 v1 规则推演(向后兼容)
+                with mp.get_context("spawn").Pool(args.procs) as pool:
                     rets = pool.map(_rollout_worker, tasks, chunksize=1)
                 r_map = {}
                 for (si, tile), r in zip(meta, rets):
@@ -240,6 +421,20 @@ class GRPOTrainer:
                 # 估计误差(~0.9)内, 归一化会放大成虚高优势, 按下限压幅
                 sd_eff = max(sd, args.min_sd)
                 spreads.append(vals.max() - vals.min())
+                if args.dump_decisions and si < args.dump_decisions:
+                    g, seat = snaps[si]
+                    hand = " ".join(tile_name(t) for t in sorted(g.players[seat].hand))
+                    melds = g.players[seat].melds
+                    dump = (f"[it {it} 决策点#{si} 座{seat} 墙剩{len(g.wall)} "
+                            f"手牌[{hand}] 副露{melds if melds else '无'}]")
+                    for t in sorted(tiles, key=lambda x: -r_map[si][x]):
+                        v = r_map[si][t]
+                        a = (v - mu) / (sd_eff + 1e-6)
+                        a = float(np.clip(a, -args.adv_clip, args.adv_clip))
+                        dump += (f"\n    {tile_name(t)}: 回报{v:+.3f} "
+                                 f"sd_eff={sd_eff:.3f} 优势{a:+.3f}")
+                    log_f.write(dump + "\n")
+                    log_f.flush()
                 for t, v in zip(tiles, vals):
                     a = (v - mu) / (sd_eff + 1e-6)
                     a = float(np.clip(a, -args.adv_clip, args.adv_clip))
@@ -315,11 +510,21 @@ def main():
     ap.add_argument("--adv-clip", type=float, default=3.0)
     ap.add_argument("--min-sd", type=float, default=1.0,
                     help="优势归一化 sd 下限(塑形奖励单位): 低区分度组不再放大噪声")
+    ap.add_argument("--dump-decisions", type=int, default=0,
+                    help="每迭代打印前 N 个决策点的候选/回报/优势明细")
     ap.add_argument("--inner-epochs", type=int, default=2)
     ap.add_argument("--feat-version", type=int, default=3, choices=[2,3])
-    ap.add_argument("--rollout", type=str, default="v1",
+    ap.add_argument("--rollout", type=str, default="nn",
                     choices=["v1", "nn", "jax"],
-                    help="推演策略: v1规则 / nn当前策略 / jax环境+nn(最快)")
+                    help="弃用: 请用 --rollout-mode")
+    ap.add_argument("--rollout-mode", type=str, default=None,
+                    choices=["nn", "v1", "v10", "v31", "v10_jax", "cheat", "cheat_full", "cheat_full_jax", "oracle"],
+                    help="推演模式: nn=JAX+NN, 其余=对应规则bot推演")
+    ap.add_argument("--opp-model", type=str, default="self",
+                    choices=["self", "init", "v1", "v10", "v31", "cheat", "cheat_full", "cheat_full_jax", "oracle"],
+                    help="对手模型(nn模式): self=当前策略, init=固定初始模型, 规则bot名=规则对手(需--opp-model)")
+    ap.add_argument("--rollout-gpus", type=int, default=1,
+                    help="jax rollout 使用的 GPU 数(多卡并行推演)")
     ap.add_argument("--step-penalty", type=float, default=0.02)
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--eval-games", type=int, default=400)

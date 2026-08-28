@@ -244,4 +244,4 @@ def shanten(tiles_counts: list[int]) -> int:
         t = min(t, need - m)
         p = min(p, 1)
         best = min(best, 2 * need - 2 * m - t - p)
-    return best
+    return int(best)  # 手牌计数可能为 numpy int8, min() 会保留 np 标量类型, 污染调用方算术

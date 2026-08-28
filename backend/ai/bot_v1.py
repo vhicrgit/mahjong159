@@ -48,7 +48,7 @@ class Bot:
         for o in opts:
             t = o["tile"]
             # 剩余进张
-            wr = sum(max(0, 4 - visible[w] - counts[w]) for w in o["waits"])
+            wr = int(sum(max(0, 4 - visible[w] - counts[w]) for w in o["waits"]))
             # 放杠风险粗估
             risk = 0.0
             if t != RED:

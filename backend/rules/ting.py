@@ -53,7 +53,7 @@ def discard_options(counts14: list[int]) -> list[dict]:
         s = shanten(counts14)
         waits = waiting_tiles(counts14) if s == 0 else []
         # 剩余可摸的进张数(粗略: 4 - 手里已有)
-        wait_count = sum(4 - counts14[w] for w in waits)
+        wait_count = int(sum(4 - counts14[w] for w in waits))
         options.append({
             "tile": t,
             "shanten": s,

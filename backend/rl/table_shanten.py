@@ -11,7 +11,7 @@ import numpy as np
 
 _TABLE = None
 PAD = 255
-K_MAX = 32
+K_MAX = 24
 
 
 def _load():

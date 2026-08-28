@@ -39,7 +39,7 @@ def _rule_score(game, seat, tile: int) -> float:
     counts[tile] -= 1
     s = shanten(counts)
     waits = waiting_tiles(counts) if s == 0 else []
-    wait_count = sum(4 - counts[w] for w in waits) if s == 0 else 0
+    wait_count = int(sum(4 - counts[w] for w in waits)) if s == 0 else 0
 
     # 放杠风险
     visible = [0] * 28

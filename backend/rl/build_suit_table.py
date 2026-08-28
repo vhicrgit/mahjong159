@@ -17,7 +17,7 @@ sys.path.insert(0, ".")
 
 from .suit_table_poc import suit_front  # noqa: 复用已验证的 DFS
 
-K_MAX = 32          # 前沿上限(实测 <<16)
+K_MAX = 26          # 前沿上限(实测 <<16)
 N_CODE = 5 ** 9     # 1953125
 PAD = 255
 

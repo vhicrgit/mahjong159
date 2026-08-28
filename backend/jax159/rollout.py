@@ -73,37 +73,97 @@ def _inject(snap, hands, wall):
 
 
 def rollout_jax(sts: State, meta, net, step_penalty: float,
-                max_steps: int = 200):
-    """全 jit 推演: 一次 while_loop 跑到终局, 返回 per-(si,tile) 平均塑形得分。
-    net: JaxNet(其 params 作为显式参数, 更新不触发重编译)。"""
+                max_steps: int = 200, feat_chunk: int = 2048,
+                net_opp=None):
+    """Python 驱动推演: NN 出牌 + v1 规则碰/杠(与真实引擎语义一致)。
+    react 阶段用 Python rules.win.shanten 决策, 保证对手会碰。
+    net: hero 的策略网络; net_opp: 对手策略网络(None 则与 hero 相同)。"""
     load_win_tables()
     load_front_table()
-    # 分块调用 jit 推演(每块形状静态, 峰值内存可控; 编译一次)
+    obs_j = jax.jit(encode_obs)
+    legal_v = jax.vmap(jax.jit(legal_jit))
+    step_v = jax.vmap(jax.jit(step_jit))
+
     B = sts.hands.shape[0]
-    CH = 2048
-    parts = []
-    for c0 in range(0, B, CH):
-        c1 = min(c0 + CH, B)
-        part, _ = _rollout_jit(slice_state(sts, c0, c1), net.params,
-                               step_penalty, max_steps)
-        parts.append(part)
-    if len(parts) == 1:
-        sts = parts[0]
-    else:
-        sts = State(**{f: jnp.concatenate([getattr(p, f) for p in parts],
-                                          axis=0)
-                       for f in State._fields})
+    hero_arr = np.array([h for _, _, h in meta], dtype=np.int32)
+    use_opp = net_opp is not None
+    done = jnp.zeros(B, dtype=jnp.bool_)
+    CH = feat_chunk
+    for _ in range(max_steps):
+        if bool(done.all()):
+            break
+        # 分块特征计算(控制峰值内存)
+        Bn = sts.hands.shape[0]
+        feat_parts = []
+        for c0 in range(0, Bn, CH):
+            c1 = min(c0 + CH, Bn)
+            feat_parts.append(obs_j(slice_state(sts, c0, c1),
+                                    sts.turn.astype(jnp.int8)[c0:c1]))
+        feats = jnp.concatenate(feat_parts, axis=0)
+        legal = legal_v(sts)[:, :28]
+        q = net.q_values(feats)
+        if use_opp:
+            q_opp = net_opp.q_values(feats)
+            is_hero = (sts.turn == jnp.asarray(hero_arr))
+            q = jnp.where(is_hero[:, None], q, q_opp)
+        q = jnp.where(legal, q, -1e9)
+        acts = q.argmax(axis=-1).astype(jnp.int32)
+        # react 决策: v1 规则(向听降则碰/杠), Python 侧只处理 react 游戏
+        react_mask = np.asarray(sts.phase) == 1
+        if react_mask.any():
+            acts_np = np.asarray(acts).copy()
+            hands_np = np.asarray(sts.hands)
+            pend_p = np.asarray(sts.pend_peng)
+            pend_g = np.asarray(sts.pend_gang)
+            ld_np = np.asarray(sts.last_discard)
+            for i in np.nonzero(react_mask)[0]:
+                ps = int(np.argmax((pend_p[i] | pend_g[i]).astype(np.int8)))
+                hand = list(hands_np[i, ps])
+                t = int(ld_np[i])
+                do_gang = pend_g[i, ps] and _peng_gang_ok(hand, t, 3)
+                do_peng = pend_p[i, ps] and _peng_gang_ok(hand, t, 2)
+                acts_np[i] = 2 if do_gang else (1 if do_peng else 0)
+            acts = jnp.asarray(acts_np, dtype=jnp.int32)
+        # 分块 step(控制峰值内存)
+        Bn2 = sts.hands.shape[0]
+        sts_parts = []
+        for c0 in range(0, Bn2, CH):
+            c1 = min(c0 + CH, Bn2)
+            sts_parts.append(step_v(slice_state(sts, c0, c1), acts[c0:c1]))
+        sts = sts_parts[0] if len(sts_parts) == 1 else State(**{
+            f: jnp.concatenate([getattr(p, f) for p in sts_parts], axis=0)
+            for f in State._fields})
+        done = done | (sts.phase == P_OVER)
     winner = sts.winner.astype(jnp.int32)
     n159 = sts.n_159.astype(jnp.int32)
     draws = sts.draws.astype(jnp.float32)
-    shaped = _shaped_from_final(sts, winner, n159, draws, step_penalty)
+    shaped = _shaped_from_final(sts, winner, n159, draws, step_penalty,
+                                hero_arr)
     r_map = {}
     buf = {}
     for (si, tile, hero), r in zip(meta, shaped.tolist()):
-        buf.setdefault(si, {})[tile] = r
+        buf.setdefault(si, {}).setdefault(tile, []).append(r)
     for si, d in buf.items():
-        r_map[si] = {t: v for t, v in d.items()}
+        r_map[si] = {t: float(np.mean(v)) for t, v in d.items()}
     return r_map
+
+
+def _peng_gang_ok(hand, tile, n):
+    """v1 语义: 碰/杠后向听(最优弃牌)低于当前向听。hand 为 13 张计数。"""
+    from backend.rules.win import shanten
+    before = shanten(hand)
+    c = list(hand)
+    c[tile] -= n
+    # 碰后须弃一张
+    best = 99
+    for d in range(28):
+        if c[d] > 0:
+            c2 = list(c)
+            c2[d] -= 1
+            s = shanten(c2)
+            if s < best:
+                best = s
+    return best < before
 
 
 def _rollout_scan_fn(sts, params, step_penalty, max_steps):
@@ -138,8 +198,8 @@ def _rollout_scan_fn(sts, params, step_penalty, max_steps):
 _rollout_jit = jax.jit(_rollout_scan_fn, static_argnames=("max_steps",))
 
 
-def _shaped_from_final(sts, winner, n159, draws, step_penalty):
-    """(B,) 塑形得分: scores = 杠分 + E[n|wall]分 - δ×draws。
+def _shaped_from_final(sts, winner, n159, draws, step_penalty, hero):
+    """(B,) 塑形得分: hero 的 杠分 + E[n|wall]分 - δ×draws。
     直接用最终 State 的 scores 字段(含实际翻牌分), 用 E[n] 替换翻牌部分。"""
     B = sts.hands.shape[0]
     wall_pos = sts.wall_pos.astype(jnp.int32)
@@ -163,6 +223,8 @@ def _shaped_from_final(sts, winner, n159, draws, step_penalty):
                                             winner[:, None]),
                         3.0 * per_exp[:, None], -per_exp[:, None])
     win_exp = jnp.where(has_win[:, None], win_exp, 0.0)
-    # scores(最终) 含 杠分+实际翻牌分; 替换翻牌部分
-    shaped_all = sts.scores.astype(jnp.float32) - win_act + win_exp
-    return shaped_all.sum(-1) - step_penalty * draws
+    # scores(最终) 含 杠分+实际翻牌分; 替换翻牌部分, 取 hero 座位
+    shaped_all = sts.scores.astype(jnp.float32) - win_act + win_exp  # (B,4)
+    B = shaped_all.shape[0]
+    hero_v = jnp.asarray(hero, dtype=jnp.int32)
+    return shaped_all[jnp.arange(B), hero_v] - step_penalty * draws
