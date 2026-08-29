@@ -18,6 +18,8 @@ _worker_ctx = None
 
 def _worker_main(in_q, out_q, gpu, cache_dir):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+    # 强制限制 JAX 显存(不继承主进程): 给同卡主进程留空间; 单卡 worker 也用不满
+    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.45"
     import jax
     import jax.numpy as jnp
     from backend.jax159.env159 import load_win_tables
@@ -64,21 +66,52 @@ def start_workers(n_gpus, cache_dir):
 
 def rollout_parallel(sts, meta, net_params, step_penalty, in_q, out_q,
                      n_gpus):
-    """把 sts 分 n_gpus 块派给 worker, 聚合奖励。"""
+    """把 sts 分 n_gpus 块派给 worker, 聚合奖励。
+    net_params: dict(可为 jnp), 统一转 numpy 以便 pickle 传输。
+
+    切分按 snap(si) 对齐: 同一 snap 的所有(候选×世界)局面必须在同一
+    worker —— 否则不同 worker 的 XLA kernel 浮点差异会成为候选间的
+    系统误差(而非随机噪声), spread 虚高、组内优势方向错误(实测:
+    连续切分 spread 0.9 vs 对齐后应回到 0.2, it10 胜率 23% vs 27%)。"""
+    net_params = {k: np.asarray(v) for k, v in net_params.items()}
     B = sts.hands.shape[0]
-    chunk = B // n_gpus
-    results = [None] * n_gpus
-    for i in range(n_gpus):
-        lo, hi = i * chunk, (i + 1) * chunk if i < n_gpus - 1 else B
+    # 按 si 分组(局面连续): si -> (start, end)
+    si_order, si_span = [], {}
+    for i, m in enumerate(meta):
+        si = m[0]
+        if si not in si_span:
+            si_order.append(si)
+            si_span[si] = [i, i]
+        si_span[si][1] = i + 1
+    n_si = len(si_order)
+    per, rem = divmod(n_si, n_gpus)
+    assign = []  # [(lo, hi)] 局面区间
+    idx = 0
+    for w in range(n_gpus):
+        cnt = per + (1 if w < rem else 0)
+        if cnt == 0:
+            assign.append(None)
+            continue
+        sis = si_order[idx: idx + cnt]
+        idx += cnt
+        assign.append((si_span[sis[0]][0], si_span[sis[-1]][1]))
+    for w, span in enumerate(assign):
+        if span is None:  # 局面数 < worker 数, 空 worker 跳过一个局面
+            fields = _state_to_fields(slice_state_fields(sts, 0, 1))
+            in_q.put((fields, meta[:1], net_params, step_penalty))
+            continue
+        lo, hi = span
         fields = _state_to_fields(slice_state_fields(sts, lo, hi))
         in_q.put((fields, meta[lo:hi], net_params, step_penalty))
+    results = [None] * n_gpus
     for i in range(n_gpus):
         r_map = out_q.get()
         results[i] = r_map
-    # 合并 (按 meta 顺序)
     merged = {}
-    for i in range(n_gpus):
-        merged.update(results[i])
+    for i, r in enumerate(results):
+        if assign[i] is None:
+            continue  # 空 worker 的结果是 pad 局面的, 丢弃
+        merged.update(r)
     return merged
 
 
