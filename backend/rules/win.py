@@ -233,11 +233,21 @@ def shanten(tiles_counts: list[int]) -> int:
 
     need(面子需求)由手牌张数推导: 13张→4, 副露1副的10张→3。
     常数固定 2*need: 13张经典 8 - 2m - t - p; 14张(3n+2)自动得 -1=胡。
+
+    need==0 特判(四副露后只差将): 公式 2*need-2m-t-p 表达不了"只差将"
+    (m/t 全 0 时, 不成对的两张会被错算成 0)。历史上用 max(1,need) 兜底,
+    反而把 1 张暗牌算成向听 2 —— 与 is_win 自相矛盾(补成对即判胡)。
     """
     red = tiles_counts[RED]
     counts = tuple(tiles_counts[:27])
     total = sum(counts) + red
-    need = max(1, (total - 1) // 3)
+    need = (total - 1) // 3
+    if need <= 0:
+        if total <= 1:
+            return 0                       # 1 张暗牌: 听对子
+        if red >= 1:
+            return -1                      # 红中+任意 = 成对
+        return -1 if any(c >= 2 for c in counts) else 1
     best = 99
     for m, t, p in _dfs_cached(counts, red, need):
         m = min(m, need)

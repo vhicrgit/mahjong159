@@ -78,7 +78,8 @@ def shanten_batch(hands) -> jax.Array:
     c2 = (c[:, 18:27] * _POW5).sum(1)
     red = c[:, 27]
     total = c.sum(1)
-    need = jnp.clip((total - 1) // 3, 1, 4)
+    need_raw = (total - 1) // 3
+    need = jnp.clip(need_raw, 1, 4)
 
     B = hands.shape[0]
     best = jnp.full((B,), 99, dtype=jnp.int32)
@@ -93,4 +94,8 @@ def shanten_batch(hands) -> jax.Array:
         return jnp.minimum(carry, s.min(axis=(1, 2, 3))), None
 
     best, _ = jax.lax.scan(body, best, SPLIT_ARR)
-    return best
+    # need==0 特判(四副露只差将), 与 rules/win.py shanten() 一致
+    has_pair = (c[:, :27] >= 2).any(axis=1)
+    special = jnp.where(total <= 1, 0,
+                        jnp.where((red >= 1) | has_pair, -1, 1))
+    return jnp.where(need_raw <= 0, special, best)

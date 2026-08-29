@@ -189,6 +189,16 @@ static inline int shanten_code(const Code *k) {
 int mj_shanten(const int8_t *c) {
     Code k;
     encode(c, &k);
+    /* need==0 特判(四副露只差将), 与 rules/win.py shanten() 逐位一致。
+       C 的整数除法向零取整, total=0 时 (0-1)/3=0 也进特判, 无害。 */
+    int need = (k.total - 1) / 3;
+    if (need <= 0) {
+        if (k.total <= 1) return 0;
+        if (k.red >= 1) return -1;
+        for (int i = 0; i < 27; i++)
+            if (c[i] >= 2) return -1;
+        return 1;
+    }
     return shanten_code(&k);
 }
 
