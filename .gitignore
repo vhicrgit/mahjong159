@@ -28,6 +28,12 @@ _*.html
 _*.txt
 _*.png
 _*.jpg
+_*.c
+mobile/wasm/_bench
+
+# wasm 构建副产物: 原生对拍用的动态库(平台相关, 不入库)
+# 由 mobile/wasm/build.sh 生成; 入库的是 mjcore.wasm 与 js/mjcore_wasm.js
+*.dylib
 .venv-jax/
 .jax_cache/
 models/*.bin
