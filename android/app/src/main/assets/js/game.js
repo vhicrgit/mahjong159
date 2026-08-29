@@ -11,21 +11,58 @@ let lastLogLen = 0;           // 用于音效: 跟踪新增日志
 const AI_DELAY = 200;   // AI 回合间隔(搜索本身也需时间, 不必额外等待太久)
 const SEAT_NAMES = ["我", "下家", "对家", "上家"];
 
-// 对手阵容: seat -> {昵称, 工厂函数, 说明}
-// 与 backend/ai/roster.py 的 ROSTER 保持一致
-// 老鸟已从 v4 升级为 v31(副露感知向听 + 两步推演), 会正常碰杠
-const ROSTER = {
-  1: { nick: "菜鸟", desc: "规则Bot v1: 牌效优先",
-       make: (g, s) => new Bot(g, s) },
-  2: { nick: "老鸟", desc: "规则Bot v31: 两步推演+副露感知向听",
-       make: (g, s) => new BotV31(g, s) },
-  3: { nick: "挂哥", desc: "作弊Bot: 可见牌堆",
-       make: (g, s) => new BotOracle(g, s, { beam: 12 }) },
+// 可选 AI 档位: kind -> {昵称, 说明, 工厂函数}
+// 档位名与 backend/ai/roster.py 的 KIND_INFO 对齐, 便于两端对照。
+// 桌面版还有 v10(中鸟) / target(目标) / cheat_opp(挂王) / cheat_full(神挂),
+// 对应的 bot_v10.py / bot_target.py / bot_cheat.py 尚未移植到 JS, 所以不列。
+// v4 是手机版独有的(解析+PIMC), 后端无对应档位。
+const BOT_KINDS = {
+  v1:         { nick: "菜鸟", desc: "规则Bot v1: 牌效优先",
+                make: (g, s) => new Bot(g, s) },
+  v4:         { nick: "老手", desc: "规则Bot v4: 解析+PIMC精修",
+                make: (g, s) => new BotV4(g, s, { worlds: 24, beam: 6, horizon: 6 }) },
+  v31:        { nick: "老鸟", desc: "规则Bot v31: 两步推演+副露感知",
+                make: (g, s) => new BotV31(g, s) },
+  scholar:    { nick: "学者", desc: "牌型价值: 期望胡牌巡数",
+                make: (g, s) => new BotHV(g, s) },
+  cheat_wall: { nick: "挂哥", desc: "作弊Bot: 可见牌堆",
+                make: (g, s) => new BotOracle(g, s, { beam: 12 }) },
 };
+
+// 默认阵容: 与 backend/ai/roster.py 的 ROSTER 保持一致
+const DEFAULT_KINDS = { 1: "v1", 2: "v31", 3: "cheat_wall" };
+const KINDS_STORE_KEY = "mj159_seat_kinds";
+
+// 当前生效的各席档位(持久化到 localStorage)
+let seatKinds = loadSeatKinds();
+
+function loadSeatKinds() {
+  const out = Object.assign({}, DEFAULT_KINDS);
+  try {
+    const raw = localStorage.getItem(KINDS_STORE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      for (const s of [1, 2, 3]) {
+        if (BOT_KINDS[saved[s]]) out[s] = saved[s];   // 档位名可能已下线, 校验后再用
+      }
+    }
+  } catch (e) { /* localStorage 不可用时退回默认 */ }
+  return out;
+}
+
+function saveSeatKinds() {
+  try { localStorage.setItem(KINDS_STORE_KEY, JSON.stringify(seatKinds)); }
+  catch (e) { /* 忽略 */ }
+}
+
+function seatKindInfo(seat) {
+  return BOT_KINDS[seatKinds[seat]] || BOT_KINDS[DEFAULT_KINDS[seat]];
+}
+
 let aiBots = {};   // seat -> bot 实例(每局初始化)
 
 function seatNick(seat) {
-  return ROSTER[seat] ? ROSTER[seat].nick : "我";
+  return (seat >= 1 && seat <= 3) ? seatKindInfo(seat).nick : "我";
 }
 
 // 显示某家"思考中"(同步搜索前先给反馈, 避免看起来卡死)
@@ -163,13 +200,55 @@ function newGame() {
   document.getElementById("result-overlay").classList.add("hidden");
   document.getElementById("review-panel").classList.add("hidden");
   document.getElementById("analysis-panel").classList.add("hidden");
+  document.getElementById("setup-overlay").classList.add("hidden");
   game = new Game(0);
-  // 为每个 AI 座位创建对应的 bot
+  // 为每个 AI 座位按选定档位创建 bot
   aiBots = {};
-  for (const s of [1, 2, 3]) aiBots[s] = ROSTER[s].make(game, s);
+  for (const s of [1, 2, 3]) aiBots[s] = seatKindInfo(s).make(game, s);
+  updateSeatLabels();
   render();
   refreshAnalysis();
   maybeRunAI();
+}
+
+// 弃牌区标题原本是 HTML 里写死的"上家 挂哥"等, 选档后会与实际对手不符
+function updateSeatLabels() {
+  for (const s of [1, 2, 3]) {
+    const el = document.querySelector(`#discard-${s} .dlabel`);
+    if (el) el.textContent = `${SEAT_NAMES[s]} ${seatNick(s)}`;
+  }
+}
+
+/* ---------- 开局选档面板 ---------- */
+
+function openSetup() {
+  const rows = document.getElementById("setup-rows");
+  rows.innerHTML = "";
+  for (const s of [3, 2, 1]) {          // 上家/对家/下家, 与牌桌布局同序
+    const row = document.createElement("div");
+    row.className = "setup-row";
+    let opts = "";
+    for (const [kind, info] of Object.entries(BOT_KINDS)) {
+      const sel = seatKinds[s] === kind ? " selected" : "";
+      opts += `<option value="${kind}"${sel}>${info.nick} - ${info.desc}</option>`;
+    }
+    row.innerHTML = `<span class="setup-seat">${SEAT_NAMES[s]}</span>`
+      + `<select class="setup-sel" data-seat="${s}">${opts}</select>`;
+    rows.appendChild(row);
+  }
+  // 提示区: 现在没什么要提醒的就置空(CSS 会把空元素隐掉)。
+  // 原本这里写的是"学者档单次决策需 2-5 秒", 接入 wasm 后降到百毫秒级, 已不适用。
+  document.getElementById("setup-note").textContent = "";
+  document.getElementById("setup-overlay").classList.remove("hidden");
+}
+
+function applySetupAndStart() {
+  for (const sel of document.querySelectorAll(".setup-sel")) {
+    const s = Number(sel.dataset.seat);
+    if (BOT_KINDS[sel.value]) seatKinds[s] = sel.value;
+  }
+  saveSeatKinds();
+  newGame();
 }
 
 function maybeRunAI() {
@@ -270,8 +349,12 @@ function render() {
 function renderMyHand() {
   const myHand = document.getElementById("my-hand");
   myHand.innerHTML = "";
-  const recTile = (lastAnalysis && lastAnalysis.discards && lastAnalysis.discards.length)
-    ? lastAnalysis.discards[0].tile : null;
+  // 「荐」的来源: 分析面板打开且 wasm 就绪时用 HandAnalyzer 的期望巡数口径,
+  // 否则用 analyzer.js 的启发式排序首项。
+  const recTile = (lastAnalysis && lastAnalysis.rec_hv !== undefined)
+    ? lastAnalysis.rec_hv
+    : ((lastAnalysis && lastAnalysis.discards && lastAnalysis.discards.length)
+        ? lastAnalysis.discards[0].tile : null);
   const drawnTile = (game.lastDrawn && game.lastDrawn.seat === 0) ? game.lastDrawn.tile : null;
   // 「荐」只标一张: 推荐结果是牌值, 若按牌值标记, 手里一对会两张都亮,
   // 看上去像在建议"把这对打掉"。与选中逻辑保持一致: 按索引只标首张。
@@ -289,6 +372,15 @@ function renderMyHand() {
   updateTingHint();
 }
 
+// 把听口渲染成小号牌面图(而不是"3饼 6饼"这种文字), 与牌桌视觉统一
+function waitTilesHTML(tiles) {
+  let h = "";
+  for (const t of tiles) {
+    h += `<span class="wait-tile" title="${tileName(t)}">${TileArt.svg(t)}</span>`;
+  }
+  return h;
+}
+
 // 听牌提示
 function updateTingHint() {
   let hintEl = document.getElementById("ting-hint");
@@ -300,13 +392,36 @@ function updateTingHint() {
   if (!game || game.phase === "game_over") { hintEl.innerHTML = ""; return; }
   const p = game.players[0];
   const counts = p.handCounts();
+  const nMelds = p.melds.length;
+
+  // 预览: 选中某张牌时, 先算"打出它之后"是否听牌 —— 不用真的打出去试。
+  // 选中态下优先显示预览, 方便逐张比较哪张能听、听得宽。
+  if (selectedUid >= 0 && game.phase === "discard_wait" && game.turn === 0) {
+    const card = displayHand.find(c => c.uid === selectedUid);
+    if (card && counts[card.tile] > 0) {
+      const after = counts.slice();
+      after[card.tile]--;
+      const sAfter = shantenWithMelds(after, nMelds);
+      if (sAfter === 0) {
+        const waits = waitingTiles(after);
+        hintEl.innerHTML = `<span class='ting-preview'>打 ${tileName(card.tile)} 则听:</span>`
+          + waitTilesHTML(waits);
+        return;
+      }
+      if (sAfter > 0) {
+        hintEl.innerHTML = `<span class='ting-preview-no'>打 ${tileName(card.tile)} 后向听数: ${sAfter}</span>`;
+        return;
+      }
+    }
+  }
+
   // 必须用副露感知向听: 碰/杠后暗牌变短(11/10张), 直接调 shanten() 会把
   // 向听高估约 2*副露数, 导致"有副露时已经听牌了却不提示"
   // (实测: 1个碰 + 暗牌听牌, 旧逻辑算出 2, 正确值是 0)
-  const s = shantenWithMelds(counts, p.melds.length);
+  const s = shantenWithMelds(counts, nMelds);
   if (s === 0 && p.hand.length % 3 === 1) {
-    const names = waitingTiles(counts).map(tileName).join(" ");
-    hintEl.innerHTML = `<span class='ting-ok'>已听牌, 听: ${names}</span>`;
+    hintEl.innerHTML = `<span class='ting-ok'>已听牌, 听:</span>`
+      + waitTilesHTML(waitingTiles(counts));
   } else if (s >= 0) {
     hintEl.innerHTML = `<span class='ting-no'>向听数: ${s}</span>`;
   } else {
@@ -542,6 +657,9 @@ function showResult() {
 }
 
 // ---------- 分析面板 ----------
+// 代数计数器: 局面一变就作废上一次未完成的异步 E 计算
+let hvGen = 0;
+
 function refreshAnalysis() {
   if (!game || game.phase === "game_over") { lastAnalysis = null; return; }
   const az = new Analyzer(game, 0);
@@ -549,9 +667,67 @@ function refreshAnalysis() {
   if (game.phase === "discard_wait" && game.turn === 0) {
     data.discards = az.analyzeDiscards();
   }
-  lastAnalysis = data;
   const panel = document.getElementById("analysis-panel");
-  if (!panel.classList.contains("hidden")) renderAnalysis(data);
+  const panelOpen = !panel.classList.contains("hidden");
+  hvGen++;                       // 作废旧的异步计算
+  lastAnalysis = data;
+  if (panelOpen && data.discards && data.discards.length && MJWasm.ok) {
+    // 先把面板画出来(带加载态), 再分片算期望巡数 —— 否则开局局面要阻塞 ~300ms
+    data.hv_loading = true;
+    data.hv_done = 0;
+    renderAnalysis(data);
+    computeHandValueAsync(data, hvGen);
+  } else if (panelOpen) {
+    renderAnalysis(data);
+  }
+  renderMyHand();
+}
+
+/** 让出一帧, 给浏览器机会把加载动画和已算出的部分画上去 */
+function nextFrame() {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => resolve());
+    else setTimeout(resolve, 0);
+  });
+}
+
+/**
+ * 逐张算期望巡数 E, 每张之间让出一帧, 过程中界面保持可响应。
+ *
+ * 两套口径并存而非取代:
+ *   analyzer.js  score = -100*向听 + 3*有效进张   启发式加权, 毫秒级
+ *   HandAnalyzer E = 期望胡牌巡数              精确递推, 有物理含义
+ * 面板关闭时用前者; 打开时用后者接管「荐」与排序。
+ *
+ * 仅在 wasm 就绪时做: 纯 JS 跑 E 要 2-5 秒。
+ * 全部算完才重排 —— 边算边排会让行不停跳动。
+ */
+async function computeHandValueAsync(data, gen) {
+  let best = null, bestE = Infinity;
+  for (let i = 0; i < data.discards.length; i++) {
+    await nextFrame();
+    if (gen !== hvGen) return;             // 局面已变, 丢弃本次结果
+    const d = data.discards[i];
+    const e = MJWasm.hvEAfterDiscard(game, 0, 1.0, d.tile);
+    if (e !== null && e >= 0) {
+      d.hv_e = Math.round(e * 100) / 100;
+      if (e < bestE) { bestE = e; best = d.tile; }
+    }
+    data.hv_done = i + 1;
+    renderAnalysis(data);                  // 渐进展示, 能看到 E 逐行填上
+  }
+  if (gen !== hvGen) return;
+  data.hv_loading = false;
+  if (best !== null) {
+    data.rec_hv = best;
+    // 按期望巡数升序重排(越小越好); 没算出 E 的排最后
+    data.discards.sort((a, b) => {
+      const ea = a.hv_e === undefined ? Infinity : a.hv_e;
+      const eb = b.hv_e === undefined ? Infinity : b.hv_e;
+      return ea - eb;
+    });
+  }
+  renderAnalysis(data);
   renderMyHand();
 }
 
@@ -578,12 +754,33 @@ function renderAnalysis(data) {
   html += "</div>";
 
   if (data.discards && data.discards.length) {
-    html += '<div class="ana-section"><div class="ana-title">出牌建议(最优在前)</div>';
-    for (let i = 0; i < Math.min(data.discards.length, 8); i++) {
+    const hasE = data.discards.some(d => d.hv_e !== undefined);
+    const title = data.hv_loading
+      ? "出牌建议"
+      : (hasE ? "出牌建议(期望巡数升序)" : "出牌建议(牌效排序)");
+    html += `<div class="ana-section"><div class="ana-title">${title}</div>`;
+    if (data.hv_loading) {
+      const total = data.discards.length;
+      const pct = Math.round((data.hv_done || 0) / total * 100);
+      html += `<div class="ana-loading"><span class="spinner"></span>`
+        + `期望巡数计算中 ${data.hv_done || 0}/${total}`
+        + `<span class="load-bar"><span class="load-fill" style="width:${pct}%"></span></span></div>`;
+    }
+    // 期望巡数条的相对刻度: 只拿「展示出来的那几行」做区间。
+    // 若用全部候选的区间, 前几名的 E 往往挤在一小段里(如 18.31~18.76 对
+    // 全体 18.31~20.83), 条子全是 82-100% 看不出差别。绝对值就在旁边写着,
+    // 条子只负责"这几个选项之间怎么比"。
+    const SHOW_N = Math.min(data.discards.length, 8);
+    const shownE = data.discards.slice(0, SHOW_N)
+      .filter(d => d.hv_e !== undefined).map(d => d.hv_e);
+    const minE = shownE.length ? Math.min(...shownE) : 0;
+    const maxE = shownE.length ? Math.max(...shownE) : 0;
+    const spanE = maxE - minE;
+    for (let i = 0; i < SHOW_N; i++) {
       const d = data.discards[i];
       const rpct = Math.round(d.gang_risk * 100);
-      const rcls = d.gang_risk > 0.5 ? "risk-high" : (d.gang_risk > 0.2 ? "risk-mid" : "risk-low");
-      html += `<div class="discard-suggest${i === 0 ? " best" : ""}">`;
+      const isHv = data.rec_hv !== undefined && d.tile === data.rec_hv;
+      html += `<div class="discard-suggest${i === 0 ? " best" : ""}${isHv ? " hv-best" : ""}">`;
       html += makeTileEl(d.tile, "sm").outerHTML;
       html += '<div class="info">';
       if (d.shanten === 0 && d.waits.length) {
@@ -592,7 +789,22 @@ function renderAnalysis(data) {
       } else {
         html += `打后向听数: ${d.shanten} | 被杠风险 ${rpct}%`;
       }
-      html += `<div class="risk-bar"><div class="risk-fill ${rcls}" style="width:${rpct}%"></div></div>`;
+      // 期望巡数: 还需要摸几巡才能胡(越小越好), 比启发式 score 直观
+      if (d.hv_e !== undefined) {
+        html += `<br><span class="hv-e${isHv ? " hv-e-best" : ""}">期望巡数 ${d.hv_e}${isHv ? " ★" : ""}</span>`;
+        // 区间退化(全相等)时给满格, 避免除零。下限 12% 是为了让最差的一行
+        // 也看得见条子, 不致于看起来像渲染失败
+        const ratio = spanE > 1e-9 ? (maxE - d.hv_e) / spanE : 1;
+        const w = Math.round(12 + 88 * ratio);
+        const ecls = ratio >= 0.66 ? "e-good" : (ratio >= 0.33 ? "e-mid" : "e-bad");
+        html += `<div class="risk-bar"><div class="risk-fill ${ecls}" style="width:${w}%"></div></div>`;
+      } else if (data.hv_loading) {
+        html += `<br><span class="hv-e hv-e-wait">期望巡数 计算中...</span>`;
+      } else {
+        // wasm 未启用: 没有 E 可画, 退回风险条
+        const rcls = d.gang_risk > 0.5 ? "risk-high" : (d.gang_risk > 0.2 ? "risk-mid" : "risk-low");
+        html += `<div class="risk-bar"><div class="risk-fill ${rcls}" style="width:${rpct}%"></div></div>`;
+      }
       html += "</div></div>";
     }
     html += "</div>";
@@ -633,8 +845,18 @@ function loadReview() {
 }
 
 // ---------- 启动 ----------
-document.getElementById("btn-new").onclick = newGame;
+// 「新局」先开选档面板; 结算后的「再来一局」沿用当前配置, 不再弹
+document.getElementById("btn-new").onclick = openSetup;
 document.getElementById("btn-again").onclick = newGame;
+document.getElementById("btn-setup-start").onclick = applySetupAndStart;
+document.getElementById("btn-setup-cancel").onclick = () => {
+  document.getElementById("setup-overlay").classList.add("hidden");
+};
+document.getElementById("btn-setup-default").onclick = () => {
+  seatKinds = Object.assign({}, DEFAULT_KINDS);
+  saveSeatKinds();
+  openSetup();          // 重建面板以刷新下拉选中项
+};
 document.getElementById("btn-peng").onclick = doPeng;
 document.getElementById("btn-gang").onclick = doGang;
 document.getElementById("btn-pass").onclick = doPass;
@@ -647,9 +869,18 @@ document.getElementById("btn-review").onclick = () => {
   document.getElementById("review-panel").classList.toggle("hidden");
   loadReview();
 };
-document.getElementById("close-analysis").onclick = () =>
+// 关面板后要重算一次: 否则 lastAnalysis 里的 rec_hv 会滞留,
+// 「荐」停在期望巡数口径上不退回牌效口径
+document.getElementById("close-analysis").onclick = () => {
   document.getElementById("analysis-panel").classList.add("hidden");
+  refreshAnalysis();
+};
 document.getElementById("close-review").onclick = () =>
   document.getElementById("review-panel").classList.add("hidden");
 
-newGame();
+// 先等 wasm 规则核心就绪再开局 —— 必须异步: 主线程上同步编译 >4KB 的 wasm 会被浏览器拒绝。
+// 初始化失败(旧 WebView / wasm 被禁)时自动降级为纯 JS, 功能不受影响。
+MJWasm.init().then((ok) => {
+  if (!ok) console.warn("wasm 规则核心未启用, 降级为纯 JS(学者档会很慢)");
+  newGame();
+});

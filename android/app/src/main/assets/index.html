@@ -65,6 +65,20 @@
     <div id="my-hand"></div>
   </div>
 
+  <!-- 开局选档弹层(点「新局」弹出) -->
+  <div id="setup-overlay" class="hidden">
+    <div id="setup-box">
+      <div id="setup-title">选对手</div>
+      <div id="setup-rows"></div>
+      <div id="setup-note"></div>
+      <div id="setup-btns">
+        <button class="hbtn" id="btn-setup-default">默认阵容</button>
+        <button class="hbtn" id="btn-setup-cancel">取消</button>
+        <button class="hbtn primary" id="btn-setup-start">开局</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 结算弹层 -->
   <div id="result-overlay" class="hidden">
     <div id="result-box">
@@ -93,12 +107,16 @@
 <script src="js/tiles.js"></script>
 <script src="js/win.js"></script>
 <script src="js/ting.js"></script>
+<script src="js/mjcore_wasm.js"></script>
+<script src="js/mjwasm.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/tileRenderer.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/bot.js"></script>
 <script src="js/bots_adv.js"></script>
 <script src="js/bot_v31.js"></script>
+<script src="js/hand_value.js"></script>
+<script src="js/bot_hv.js"></script>
 <script src="js/analyzer.js"></script>
 <script src="js/game.js"></script>
 </body>

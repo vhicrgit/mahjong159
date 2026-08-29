@@ -168,6 +168,36 @@ html, body {
   position: fixed; inset: 0; background: rgba(0,0,0,.8);
   display: flex; justify-content: center; align-items: center; z-index: 200;
 }
+
+/* 开局选档面板 */
+#setup-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.8);
+  display: flex; justify-content: center; align-items: center; z-index: 210;
+}
+#setup-box {
+  background: #16213e; padding: 18px 20px; border-radius: 14px;
+  border: 2px solid #4a7ba7;
+  width: 90%; max-width: 400px; max-height: 84vh; overflow-y: auto;
+}
+#setup-title {
+  font-size: 18px; font-weight: bold; color: #ffd166;
+  text-align: center; margin-bottom: 12px;
+}
+.setup-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.setup-seat {
+  flex: 0 0 42px; font-size: 13px; color: #a8dadc; text-align: right;
+}
+.setup-sel {
+  flex: 1 1 auto; min-width: 0; font-size: 13px; padding: 6px 4px;
+  background: #0f3460; color: #eee; border: 1px solid #4a7ba7; border-radius: 6px;
+}
+#setup-note {
+  font-size: 11px; color: rgba(255,209,102,.75); line-height: 1.6;
+  margin: 6px 0 14px;
+}
+/* 无提示时不占位, 避免留一块空白间距 */
+#setup-note:empty { display: none; }
+#setup-btns { display: flex; gap: 8px; justify-content: center; }
 #result-box {
   background: #16213e; padding: 22px 26px; border-radius: 14px;
   text-align: center; border: 2px solid #e94560;
@@ -212,7 +242,38 @@ html, body {
   border-radius: 6px; margin-bottom: 6px; background: rgba(15,52,96,.4);
 }
 .discard-suggest.best { outline: 1px solid #ffd166; }
+/* 期望巡数口径选出的最优项: 用青色与牌效首项的金色区分 */
+.discard-suggest.hv-best { outline: 2px solid #6ce5a3; }
+.discard-suggest .hv-e { color: #a8dadc; }
+.discard-suggest .hv-e-best { color: #6ce5a3; font-weight: bold; }
+.discard-suggest .hv-e-wait { color: rgba(255,255,255,.35); font-style: italic; }
 .discard-suggest .info { flex: 1; font-size: 11px; line-height: 1.5; }
+
+/* 期望巡数条: 满格=本组最优(E 最小), 空=最差 */
+.risk-fill.e-good { background: #6ce5a3; }
+.risk-fill.e-mid  { background: #ffd166; }
+.risk-fill.e-bad  { background: #8d99ae; }
+
+/* 分析面板的异步加载态 */
+.ana-loading {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: #ffd166; margin-bottom: 8px;
+}
+.ana-loading .spinner {
+  width: 11px; height: 11px; flex-shrink: 0;
+  border: 2px solid rgba(255,209,102,.25);
+  border-top-color: #ffd166; border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ana-loading .load-bar {
+  flex: 1; height: 3px; background: rgba(255,255,255,.12);
+  border-radius: 2px; overflow: hidden;
+}
+.ana-loading .load-fill {
+  display: block; height: 100%; background: #ffd166;
+  transition: width .15s linear;
+}
 
 #review-summary { font-size: 13px; margin-bottom: 10px; color: #ffd166; }
 .review-step {
@@ -242,6 +303,20 @@ html, body {
 .hl-tile { color: #ffd166; font-size: 15px; }
 
 /* 听牌提示 */
-#ting-hint { text-align: center; font-size: 12px; padding: 3px 0 5px; min-height: 20px; }
+/* 听牌提示: 听口用小号牌面图, 听口多时自动换行 */
+#ting-hint {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: center; gap: 3px;
+  text-align: center; font-size: 12px; padding: 3px 4px 5px; min-height: 20px;
+}
 #ting-hint .ting-ok { color: #6ce5a3; font-weight: bold; }
 #ting-hint .ting-no { color: rgba(255,255,255,.4); }
+/* 预览态(选中某张牌但还没打出): 用金色区分, 与"已听牌"的绿色不混淆 */
+#ting-hint .ting-preview { color: #ffd166; font-weight: bold; }
+#ting-hint .ting-preview-no { color: rgba(255,209,102,.55); }
+#ting-hint .wait-tile {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 23px; background: #f7f4e9;
+  border: 1px solid #c9c4b0; border-radius: 3px; flex-shrink: 0;
+}
+#ting-hint .wait-tile svg { width: 92%; height: 92%; display: block; }
