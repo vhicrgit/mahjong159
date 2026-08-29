@@ -231,3 +231,17 @@ body {
 #ting-hint { text-align: center; font-size: 13px; padding: 2px 0 4px; min-height: 20px; }
 #ting-hint .ting-ok { color: #6ce5a3; font-weight: bold; }
 #ting-hint .ting-no { color: rgba(255,255,255,.4); }
+
+/* 牌型价值 + ρ 控件 + 分座位选择器 */
+.rho-ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #a8dadc; }
+.rho-ctl input[type="range"] { width: 90px; }
+.hv-badge { color: #ffd166; font-weight: bold; }
+.hv-np { color: #8ecae6; font-size: 11px; margin-left: 4px; }
+.bot-seat-sel { background: #17335a; color: #e0f2ff; border: 1px solid #2a4d80; border-radius: 4px; padding: 2px 4px; max-width: 130px; }
+
+/* 选中牌的听口提示 + 可听标记 */
+#sel-hint { display: flex; align-items: center; gap: 4px; padding: 4px 8px;
+  background: #17335a; border-radius: 6px; margin: 4px 0; font-size: 13px; }
+.sel-hint-label { color: #a8dadc; }
+.wait-rem { color: #ffd166; font-size: 11px; margin-right: 4px; }
+.tile.ting-able { outline: 2px solid #2ecc71; outline-offset: -2px; border-radius: 3px; }

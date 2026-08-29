@@ -51,3 +51,60 @@ def build_bots(game, human_seat: int) -> dict:
             continue
         bots[seat] = mod.Bot(game, seat, **kwargs)
     return bots
+
+
+# ---------- 可选 AI 档位(开局界面"对手选择"用) ----------
+# kind -> (显示名, 说明)
+KIND_INFO = {
+    "v1":         ("菜鸟", "规则Bot v1: 牌效优先"),
+    "v10":        ("中鸟", "规则Bot v10: 广义进张+两步推演"),
+    "v31":        ("老鸟", "规则Bot v31: v10+副露感知碰牌"),
+    "scholar":    ("学者", "牌型价值分析器: 每手算期望胡牌巡数"),
+    "target":     ("目标", "目标路线概率 Bot"),
+    "cheat_wall": ("挂哥", "作弊: 可见牌墙"),
+    "cheat_opp":  ("挂王", "作弊: 牌墙+对手手牌"),
+    "cheat_full": ("神挂", "作弊: 全信息+rollout搜索"),
+}
+
+
+def kind_name(kind: str) -> str:
+    return KIND_INFO.get(kind, (kind,))[0]
+
+
+def make_bot(kind: str | None, game, seat: int, param: int = 0):
+    """按档位名构造 Bot。kind=None/"default" 时用该座位的阵容默认。"""
+    if kind in (None, "", "default"):
+        info = ROSTER.get(seat)
+        if info is None:
+            kind = "v31"
+        else:
+            return info[1].Bot(game, seat, **info[3])
+    if kind in ("v31", "normal"):
+        from .bot_v31 import Bot as B
+        return B(game, seat)
+    if kind == "v10":
+        from .bot_v10 import Bot as B
+        return B(game, seat)
+    if kind == "v1":
+        from .bot_v1 import Bot as B
+        return B(game, seat)
+    if kind == "scholar":
+        from .bot_hv import Bot as B
+        return B(game, seat)
+    if kind == "target":
+        from .bot_target import Bot as B
+        return B(game, seat)
+    if kind == "cheat_wall":
+        from .bot_cheat import Bot as B
+        return B(game, seat, wall_lookahead=param or 32,
+                 see_opponents=False, beam=12, rollout=False)
+    if kind == "cheat_opp":
+        from .bot_cheat import Bot as B
+        return B(game, seat, wall_lookahead=param or 32,
+                 see_opponents=True, beam=12, rollout=False)
+    if kind == "cheat_full":
+        from .bot_cheat import Bot as B
+        return B(game, seat, wall_lookahead=-1, see_opponents=True,
+                 beam=param or 4, rollout=True)
+    from .bot_v31 import Bot as B
+    return B(game, seat)

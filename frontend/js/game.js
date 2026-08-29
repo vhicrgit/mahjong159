@@ -77,10 +77,14 @@ async function newGame() {
   uidCounter = 1;
   document.getElementById("result-overlay").classList.add("hidden");
   document.getElementById("review-panel").classList.add("hidden");
-  // 空值表示使用后端默认阵容(菜鸟/老鸟/挂哥 分坐三席), 不要回退成单一档位
-  const botKind = document.getElementById("bot-kind")?.value || null;
+  // 三个座位分别可选; 全部"默认"时不带 bot_kinds, 走后端阵容默认
   const botParam = Number(document.getElementById("bot-param")?.value || 0);
-  state = await api("new_game", { dealer: 0, bot_kind: botKind, bot_param: botParam });
+  const seatSel = [1, 2, 3].map(i => document.getElementById("bot-kind-" + i)?.value || "default");
+  const body = { dealer: 0, bot_param: botParam };
+  if (seatSel.some(k => k !== "default")) {
+    body.bot_kinds = { 1: seatSel[0], 2: seatSel[1], 3: seatSel[2] };
+  }
+  state = await api("new_game", body);
   render();
   refreshAnalysis();
 }
@@ -207,12 +211,49 @@ function renderMyHand() {
   const recTile = (lastAnalysis && lastAnalysis.discards && lastAnalysis.discards.length)
     ? lastAnalysis.discards[0].tile : null;
   const drawnTile = (state.last_drawn && state.last_drawn.seat === 0) ? state.last_drawn.tile : null;
+  // 打出即听的候选集合(供选中提示与标记)
+  window._tingAfter = {};
+  if (lastAnalysis && lastAnalysis.discards) {
+    for (const d of lastAnalysis.discards) {
+      if (d.waits && d.waits.length) window._tingAfter[d.tile] = d.waits;
+    }
+  }
   for (const card of displayHand) {
     const el = makeTileEl(card.tile, "", true, card.uid);
     if (card.uid === selectedUid) el.classList.add("selected");
     if (recTile !== null && card.tile === recTile) el.classList.add("recommended");
     if (drawnTile !== null && card.tile === drawnTile) el.classList.add("drawn");
+    if (window._tingAfter[card.tile]) el.classList.add("ting-able");
     myHand.appendChild(el);
+  }
+  updateSelectionHint();
+}
+
+// 选中牌时立即显示"打出后听什么"(打出前就能看到, 不会被打出去后的快速回合冲掉)
+function updateSelectionHint() {
+  let el = document.getElementById("sel-hint");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "sel-hint";
+    el.className = "hidden";
+    const anchor = document.getElementById("ting-hint");
+    if (anchor) anchor.after(el);
+    else document.getElementById("my-area").prepend(el);
+  }
+  const card = displayHand.find(c => c.uid === selectedUid);
+  const waits = card ? window._tingAfter[card.tile] : null;
+  if (card && waits && waits.length) {
+    const total = waits.reduce((s, w) => s + w.remain, 0);
+    el.innerHTML = `<span class="sel-hint-label">打 </span>`
+      + makeTileEl(card.tile, "mini").outerHTML
+      + `<span class="sel-hint-label"> → 听: </span>`
+      + waits.map(w => makeTileEl(w.tile, "mini").outerHTML
+                  + `<span class="wait-rem">×${w.remain}</span>`).join("")
+      + `<span class="sel-hint-label"> 共剩 ${total} 张</span>`;
+    el.classList.remove("hidden");
+  } else {
+    el.innerHTML = "";
+    el.classList.add("hidden");
   }
 }
 
@@ -419,7 +460,8 @@ function toggleAnalysis() {
 }
 
 async function refreshAnalysis() {
-  const data = await api("analyze");
+  const rho = document.getElementById("rho-slider")?.value ?? 1.0;
+  const data = await api("analyze?rho=" + rho);
   if (!data) return;
   lastAnalysis = data;
   const panel = document.getElementById("analysis-panel");
@@ -461,6 +503,12 @@ function renderAnalysis(data) {
       html += `<div class="discard-suggest${i === 0 ? " best" : ""}">`;
       html += makeTileEl(d.tile, "mini").outerHTML;
       html += '<div class="info">';
+      if (d.hand_value != null) {
+        html += `<span class="hv-badge">期望 ${d.hand_value} 巡胡</span>`;
+        if (d.hand_value_np != null && Math.abs(d.hand_value_np - d.hand_value) > 0.01)
+          html += `<span class="hv-np">(纯自摸 ${d.hand_value_np})</span>`;
+        html += "<br>";
+      }
       if (d.shanten === 0 && d.waits.length) {
         const wn = d.waits.map(w => w.name + "(" + w.remain + ")").join(" ");
         html += `打后听: ${wn}<br>进张 ${d.wait_remain} 张 | 被杠风险 ${rpct}%`;
@@ -512,6 +560,32 @@ async function loadReview() {
 }
 
 // ---------- 启动 ----------
+const BOT_KINDS = [
+  ["default", "默认(阵容)"],
+  ["v1", "菜鸟(v1)"],
+  ["v10", "中鸟(v10)"],
+  ["v31", "老鸟(v31)"],
+  ["scholar", "学者(牌型价值)"],
+  ["target", "目标概率"],
+  ["cheat_wall", "挂哥(看牌墙)"],
+  ["cheat_opp", "挂王(看牌+手牌)"],
+  ["cheat_full", "神挂(全信息)"],
+];
+for (const i of [1, 2, 3]) {
+  const sel = document.getElementById("bot-kind-" + i);
+  if (!sel) continue;
+  for (const [v, label] of BOT_KINDS) {
+    const op = document.createElement("option");
+    op.value = v; op.textContent = label;
+    sel.appendChild(op);
+  }
+}
+const rhoSlider = document.getElementById("rho-slider");
+if (rhoSlider) rhoSlider.oninput = () => {
+  document.getElementById("rho-val").textContent = Number(rhoSlider.value).toFixed(1);
+  refreshAnalysis();
+};
+
 document.getElementById("btn-new").onclick = newGame;
 document.getElementById("btn-sort").onclick = sortHand;
 document.getElementById("btn-analysis").onclick = () => { toggleAnalysis(); refreshAnalysis(); };

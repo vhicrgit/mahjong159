@@ -1,0 +1,8 @@
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+[it 1] snaps=124 rollouts=496 spread=+0.058 pg=-0.0099 kl=0.00000 1044s
+[it 2] snaps=123 rollouts=492 spread=+0.095 pg=-0.0147 kl=0.01267 909s
+[it 3] snaps=127 rollouts=508 spread=+0.061 pg=-0.0115 kl=0.00774 913s
+[it 4] snaps=118 rollouts=472 spread=+0.080 pg=-0.0249 kl=0.00437 928s
+[it 5] snaps=122 rollouts=488 spread=+0.117 pg=-0.0466 kl=0.00473 907s
+[it 5] eval: 胜率 24.0%, 场均 +0.01 ★

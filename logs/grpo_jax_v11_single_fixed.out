@@ -1,0 +1,25 @@
+初始化: models/dqn_shaped_100k_best.pt
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+[it 1] snaps=32 rollouts=128 spread=+1.190 pg=-0.0538 kl=0.00000 2166s
+/opt/conda/envs/python3.10/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+[it 2] snaps=32 rollouts=128 spread=+1.278 pg=-0.2228 kl=0.00899 177s
+[it 3] snaps=32 rollouts=128 spread=+1.276 pg=-0.1255 kl=0.02679 167s
+[it 4] snaps=30 rollouts=120 spread=+1.358 pg=-0.2240 kl=0.04025 1394s
+[it 5] snaps=32 rollouts=128 spread=+1.264 pg=-0.2455 kl=0.06403 164s
+[it 6] snaps=32 rollouts=128 spread=+1.049 pg=-0.4000 kl=0.07216 166s
+[it 7] snaps=28 rollouts=112 spread=+1.264 pg=-0.3181 kl=0.07314 1216s
+[it 8] snaps=32 rollouts=128 spread=+1.118 pg=-0.2457 kl=0.08989 173s
+[it 9] snaps=32 rollouts=128 spread=+1.226 pg=-0.3257 kl=0.08412 172s
+[it 10] snaps=32 rollouts=128 spread=+1.141 pg=-0.2573 kl=0.09067 168s
+[it 10] eval: 胜率 21.8%, 场均 -0.23
+[it 11] snaps=32 rollouts=128 spread=+1.153 pg=-0.2367 kl=0.10423 174s
+[it 12] snaps=28 rollouts=112 spread=+0.835 pg=-0.3164 kl=0.08726 149s
+[it 13] snaps=32 rollouts=128 spread=+1.075 pg=-0.1655 kl=0.14027 166s
+[it 14] snaps=30 rollouts=120 spread=+1.215 pg=-0.2278 kl=0.06244 156s
+[it 15] snaps=32 rollouts=128 spread=+1.255 pg=-0.4441 kl=0.12274 174s
+[it 16] snaps=29 rollouts=116 spread=+0.993 pg=-0.1575 kl=0.13275 1596s
+[it 17] snaps=30 rollouts=120 spread=+1.185 pg=0.0069 kl=0.09783 156s
+[it 18] snaps=30 rollouts=120 spread=+1.289 pg=-0.2083 kl=0.09521 161s

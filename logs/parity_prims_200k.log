@@ -1,0 +1,6 @@
+样本 210002 手
+  shanten 不一致 0
+  is_win  不一致 0
+  cpu: native(sh+win) 0.14s | py shanten 35.05s | py is_win 4.40s
+  加速比: shanten ~257x (原生含判胡, 偏保守)
+PARITY OK

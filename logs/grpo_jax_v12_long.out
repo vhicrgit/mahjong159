@@ -1,0 +1,35 @@
+初始化: models/grpo_jax_v10_mgpu_fixed_best.pt
+[it 0] init baseline: 胜率 25.2%, 场均 +0.15
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+[it 1] snaps=32 rollouts=128 spread=+1.087 pg=-0.1915 kl=0.00000 689s
+/opt/conda/envs/python3.10/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+[it 2] snaps=32 rollouts=128 spread=+1.372 pg=-0.2313 kl=0.01080 203s
+[it 3] snaps=32 rollouts=128 spread=+1.091 pg=-0.2522 kl=0.01962 164s
+[it 4] snaps=30 rollouts=120 spread=+1.296 pg=-0.3322 kl=0.03269 28s
+[it 5] snaps=32 rollouts=128 spread=+1.234 pg=-0.2397 kl=0.06702 34s
+[it 6] snaps=32 rollouts=128 spread=+1.200 pg=-0.4242 kl=0.05540 32s
+[it 7] snaps=28 rollouts=112 spread=+1.372 pg=-0.3218 kl=0.06589 30s
+[it 8] snaps=32 rollouts=128 spread=+1.113 pg=-0.2779 kl=0.08926 34s
+[it 9] snaps=32 rollouts=128 spread=+1.212 pg=-0.3472 kl=0.13119 35s
+[it 10] snaps=32 rollouts=128 spread=+0.872 pg=-0.1707 kl=0.14485 35s
+[it 10] eval: 胜率 23.2%, 场均 -0.07
+[it 11] snaps=32 rollouts=128 spread=+1.120 pg=-0.1552 kl=0.15021 35s
+[it 12] snaps=28 rollouts=112 spread=+1.159 pg=-0.4618 kl=0.16084 29s
+[it 13] snaps=32 rollouts=128 spread=+1.336 pg=-0.2758 kl=0.23111 34s
+[it 14] snaps=30 rollouts=120 spread=+1.163 pg=-0.2942 kl=0.10695 30s
+[it 15] snaps=32 rollouts=128 spread=+1.242 pg=-0.4116 kl=0.15840 34s
+[it 16] snaps=29 rollouts=116 spread=+1.021 pg=-0.1314 kl=0.18395 30s
+/opt/conda/envs/python3.10/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

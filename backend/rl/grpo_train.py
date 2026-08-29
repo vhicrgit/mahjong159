@@ -31,8 +31,11 @@ import torch.nn.functional as F
 from ..game.engine import Game
 from ..ai.bot_v1 import Bot as BotV1
 from ..ai.bot_v10 import Bot as BotV10
+from ..ai.bot_v31 import Bot as BotV31
 from ..ai.bot_cheat import Bot as BotCheat
 from ..ai.bot_oracle import Bot as BotOracle
+from ..ai.bot_native import NativeV1, NativeV10, NativeV31
+from ..ai.bot_cheat_native import NativeCheatFull
 from ..rules.ting import discard_options
 from ..rules.tiles import tile_name
 from .model import build_model, N_ACTIONS
@@ -51,11 +54,12 @@ G = {}  # worker 全局: {model_sd, size, feat_dim} 不需要, rollout 纯 CPU �
 
 
 def _collect_worker(args):
-    """v10 自对弈一局, 返回至多 snaps_per_game 个 (快照, seat) 决策点。"""
+    """v10 自对弈一局, 返回至多 snaps_per_game 个 (快照, seat) 决策点。
+    用 NativeV10(C 实现, 与 BotV10 逐位一致, 见 test_parity_collect.py)。"""
     seed, snaps_per_game = args
     rng = random.Random(seed ^ 0xC0FFEE)
     g = Game(seed=seed, human_seat=-1)
-    bots = {i: BotV10(g, i) for i in range(4)}
+    bots = {i: NativeV10(g, i) for i in range(4)}
     take_turns = set(rng.sample(range(2, 14), snaps_per_game))
     turn_count = 0
     snaps = []
@@ -103,8 +107,9 @@ _BOT_REGISTRY = {
                    "desc": "纯向听+进张, 基础规则Bot"},
     "v10":        {"name": "中鸟", "cls": BotV10,   "kwargs": {},
                    "desc": "v10 规则, 含触发性向听"},
-    "v31":        {"name": "老鸟", "cls": BotV10,   "kwargs": {},
-                   "desc": "≈v10(两步推演+副露感知向听, 同 v10 类)"},
+    "v31":        {"name": "老鸟", "cls": BotV31,   "kwargs": {},
+                   "desc": "v10 + 副露感知碰牌(碰后还要打一张才比向听)。"
+                           "v31n 是它的 C 实现, 逐位一致且快 ~600x"},
     "cheat":      {"name": "挂哥", "cls": BotCheat, "kwargs": {"wall_lookahead": 32,
                                                                 "see_opponents": False},
                    "desc": "可见牌墙(32 张), 不看对手手牌"},
@@ -116,7 +121,42 @@ _BOT_REGISTRY = {
                    "desc": "Beam Search, 已知自己摸牌序列"},
     "cheat_full_jax": {"name": "神挂JAX", "cls": BotCheat, "kwargs": {},
                    "desc": "GPU 加速版: 用 rollout_jax(NN)替代 beam 搜索, 后续接入墙特征"},
+    # 原生(C)版: 与对应的纯 Python Bot 逐位同口径, 由
+    # backend/ai/test_parity_native.py 把关(逐决策 + 整局日志/得分全等)。
+    # 单核 ~500x, 128 世界推演靠它才跑得起来。
+    "v1n":        {"name": "菜鸟C", "cls": NativeV1,  "kwargs": {},
+                   "desc": "v1 的 C 实现, 与 v1 逐位一致"},
+    "v10n":       {"name": "中鸟C", "cls": NativeV10, "kwargs": {},
+                   "desc": "v10 的 C 实现, 与 v10 逐位一致"},
+    "v31n":       {"name": "老鸟C", "cls": NativeV31, "kwargs": {},
+                   "desc": "bot_v31 的 C 实现(含副露感知碰牌), 与 bot_v31 逐位一致"},
+    "cheat_fulln": {"name": "神挂C", "cls": NativeCheatFull, "kwargs": {},
+                   "desc": "cheat_full 的 C 实现, 与 cheat_full 逐位一致(~250x)。"
+                           "仍比 v31n 贵 ~170x/局, 成本由 CHEAT_DEPTH/"
+                           "CHEAT_ROOT_WIDTH 主导"},
 }
+
+
+def _pool_map_robust(worker, tasks, procs, spawn, timeout=3600, tag=""):
+    """pool.map + 超时自愈。任务由种子驱动、完全确定, 超时杀池重试安全。
+    排障背景: spawn 池曾出现 worker 全员 idle、主进程永远等结果的死锁,
+    一次卡死让 run 空转 9 小时。"""
+    for attempt in (1, 2):
+        ctx = mp.get_context("spawn") if spawn else mp
+        pool = ctx.Pool(procs)
+        try:
+            result = pool.map_async(worker, tasks, chunksize=1).get(
+                timeout=timeout)
+        except mp.TimeoutError:
+            print(f"[警告] {tag} 推演池 {timeout}s 无结果, 终止重试"
+                  f"(第{attempt}次)", flush=True)
+            pool.terminate()
+            pool.join()
+            continue
+        pool.close()
+        pool.join()
+        return result
+    raise RuntimeError(f"{tag} 推演池两次超时, 放弃本轮迭代")
 
 
 def _rollout_worker_rules(task):
@@ -290,10 +330,10 @@ class GRPOTrainer:
             t0 = time.time()
             # 1) 状态采样
             n_games = max(8, args.states_per_iter // args.snaps_per_game)
-            with mp.Pool(args.collect_procs) as pool:
-                snaps_nested = pool.map(_collect_worker, [
-                    (args.seed0 + it * 100003 + gi, args.snaps_per_game)
-                    for gi in range(n_games)])
+            snaps_nested = _pool_map_robust(_collect_worker, [
+                (args.seed0 + it * 100003 + gi, args.snaps_per_game)
+                for gi in range(n_games)], args.collect_procs,
+                spawn=False, tag=f"it{it} 采样")
             snaps = [sn for sub in snaps_nested for sn in sub]
             if not snaps:
                 print("iter", it, "无有效快照, 跳过"); continue
@@ -306,8 +346,10 @@ class GRPOTrainer:
             for si, (g, seat) in enumerate(snaps):
                 legal = [t for t in range(N_ACTIONS) if probs[si, t] > 0]
                 top = sorted(legal, key=lambda t: -probs[si, t])[:args.top_m]
-                v10_pick = max(_v10_scores(g, seat).items(),
-                               key=lambda kv: kv[1])[0]
+                # argmax(_v10_scores) 与 NativeV10.choose_discard 同一张
+                # (两者都按 tile 升序取严格最大, 见 test_parity_collect.py),
+                # 但原来的纯 Python 版在主进程里每个快照要跑约 1 秒。
+                v10_pick = NativeV10(g, seat).choose_discard()
                 if v10_pick not in top:
                     top = top[:args.top_m - 1] + [v10_pick]
                 for tile in top:
@@ -390,8 +432,9 @@ class GRPOTrainer:
                                 args.seed0 + it * 7919 + si, args.worlds,
                                 args.step_penalty, rollout_mode, opp_model)
                                for (si, tile) in meta]
-                    with mp.get_context("spawn").Pool(args.procs) as pool:
-                        rets = pool.map(_rollout_worker_mixed, tasks_r, chunksize=1)
+                    rets = _pool_map_robust(_rollout_worker_mixed, tasks_r,
+                                            args.procs, spawn=True,
+                                            tag=f"it{it} 混合推演")
                 else:
                     # 纯规则推演(4 家同策略)
                     bot_type = rollout_mode
@@ -399,15 +442,17 @@ class GRPOTrainer:
                                 args.seed0 + it * 7919 + si, args.worlds,
                                 args.step_penalty, bot_type)
                                for (si, tile) in meta]
-                    with mp.Pool(args.procs) as pool:
-                        rets = pool.map(_rollout_worker_rules, tasks_r, chunksize=1)
+                    rets = _pool_map_robust(_rollout_worker_rules, tasks_r,
+                                            args.procs, spawn=False,
+                                            tag=f"it{it} 规则推演")
                 r_map = {}
                 for (si, tile), r in zip(meta, rets):
                     r_map.setdefault(si, {})[tile] = r
             else:
                 # 旧 v1 规则推演(向后兼容)
-                with mp.get_context("spawn").Pool(args.procs) as pool:
-                    rets = pool.map(_rollout_worker, tasks, chunksize=1)
+                rets = _pool_map_robust(_rollout_worker, tasks,
+                                        args.procs, spawn=True,
+                                        tag=f"it{it} 旧v1推演")
                 r_map = {}
                 for (si, tile), r in zip(meta, rets):
                     r_map.setdefault(si, {})[tile] = r
@@ -490,6 +535,10 @@ class GRPOTrainer:
                 torch.save({"model": self.model.state_dict(),
                             "size": args.size, "feat_dim": self.feat_dim,
                             "feat_version": args.feat_version}, args.out)
+        # 清理多卡 worker(否则常驻进程泄漏显存, 后续训练 OOM)
+        if hasattr(self, "_rw"):
+            from backend.jax159.parallel_rollout import stop_workers
+            stop_workers(self._rw[0], self._rw[2])
         log_f.close()
 
 
@@ -518,10 +567,15 @@ def main():
                     choices=["v1", "nn", "jax"],
                     help="弃用: 请用 --rollout-mode")
     ap.add_argument("--rollout-mode", type=str, default=None,
-                    choices=["nn", "v1", "v10", "v31", "v10_jax", "cheat", "cheat_full", "cheat_full_jax", "oracle"],
-                    help="推演模式: nn=JAX+NN, 其余=对应规则bot推演")
+                    choices=["nn", "v1", "v10", "v31", "v1n", "v10n", "v31n",
+                             "v10_jax", "cheat", "cheat_full", "cheat_fulln",
+                             "cheat_full_jax", "oracle"],
+                    help="推演模式: nn=JAX+NN, 其余=对应规则bot推演"
+                         "(带 n 后缀=C 原生实现, 与同名 Python bot 逐位一致但快 ~500x)")
     ap.add_argument("--opp-model", type=str, default="self",
-                    choices=["self", "init", "v1", "v10", "v31", "cheat", "cheat_full", "cheat_full_jax", "oracle"],
+                    choices=["self", "init", "v1", "v10", "v31",
+                             "v1n", "v10n", "v31n", "cheat", "cheat_full",
+                             "cheat_fulln", "cheat_full_jax", "oracle"],
                     help="对手模型(nn模式): self=当前策略, init=固定初始模型, 规则bot名=规则对手(需--opp-model)")
     ap.add_argument("--rollout-gpus", type=int, default=1,
                     help="jax rollout 使用的 GPU 数(多卡并行推演)")

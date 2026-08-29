@@ -1,0 +1,107 @@
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+  [timing] inject=122.9s rollout=965.0s
+[it 1] snaps=32 rollouts=128 spread=+0.209 pg=0.0074 kl=0.00000 1088s
+  [timing] inject=9.7s rollout=384.2s
+[it 2] snaps=32 rollouts=128 spread=+0.208 pg=-0.0361 kl=0.08391 394s
+  [timing] inject=2.3s rollout=399.1s
+[it 3] snaps=32 rollouts=128 spread=+0.232 pg=0.0001 kl=0.22817 401s
+  [timing] inject=2.2s rollout=658.1s
+[it 4] snaps=30 rollouts=120 spread=+0.280 pg=-0.0587 kl=0.19735 660s
+  [timing] inject=3.0s rollout=387.1s
+[it 5] snaps=32 rollouts=128 spread=+0.127 pg=0.0022 kl=0.12563 390s
+  [timing] inject=2.4s rollout=399.4s
+[it 6] snaps=32 rollouts=128 spread=+0.281 pg=-0.0293 kl=0.09346 402s
+  [timing] inject=2.4s rollout=641.5s
+[it 7] snaps=28 rollouts=112 spread=+0.214 pg=-0.0066 kl=0.16157 644s
+  [timing] inject=2.3s rollout=395.0s
+[it 8] snaps=32 rollouts=128 spread=+0.224 pg=-0.0276 kl=0.11597 397s
+  [timing] inject=2.3s rollout=398.8s
+[it 9] snaps=32 rollouts=128 spread=+0.191 pg=0.0174 kl=0.09780 401s
+  [timing] inject=2.7s rollout=391.0s
+[it 10] snaps=32 rollouts=128 spread=+0.242 pg=-0.0526 kl=0.10937 394s
+[it 10] eval: 胜率 23.0%, 场均 -0.10
+  [timing] inject=2.3s rollout=392.9s
+[it 11] snaps=32 rollouts=128 spread=+0.209 pg=-0.0234 kl=0.16430 395s
+  [timing] inject=2.0s rollout=349.8s
+[it 12] snaps=28 rollouts=112 spread=+0.314 pg=-0.0773 kl=0.11935 352s
+  [timing] inject=2.6s rollout=394.0s
+[it 13] snaps=32 rollouts=128 spread=+0.225 pg=-0.0099 kl=0.23555 397s
+  [timing] inject=2.8s rollout=364.6s
+[it 14] snaps=30 rollouts=120 spread=+0.217 pg=-0.0340 kl=0.11284 367s
+  [timing] inject=2.4s rollout=386.5s
+[it 15] snaps=32 rollouts=128 spread=+0.334 pg=-0.0467 kl=0.11300 389s
+  [timing] inject=2.0s rollout=732.0s
+[it 16] snaps=29 rollouts=116 spread=+0.160 pg=0.0158 kl=0.12536 734s
+  [timing] inject=3.3s rollout=356.3s
+[it 17] snaps=30 rollouts=120 spread=+0.283 pg=-0.0334 kl=0.09110 360s
+  [timing] inject=2.6s rollout=370.6s
+[it 18] snaps=30 rollouts=120 spread=+0.243 pg=0.0016 kl=0.08289 373s
+  [timing] inject=2.9s rollout=619.1s
+[it 19] snaps=31 rollouts=124 spread=+0.221 pg=-0.0264 kl=0.08629 622s
+  [timing] inject=2.4s rollout=366.9s
+[it 20] snaps=30 rollouts=120 spread=+0.278 pg=-0.1014 kl=0.08594 369s
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+  [timing] inject=99.7s rollout=767.4s
+[it 1] snaps=32 rollouts=128 spread=+0.209 pg=0.0074 kl=0.00000 867s
+  [timing] inject=10.2s rollout=383.6s
+[it 2] snaps=32 rollouts=128 spread=+0.208 pg=-0.0361 kl=0.08391 394s
+  [timing] inject=2.3s rollout=398.8s
+[it 3] snaps=32 rollouts=128 spread=+0.232 pg=0.0001 kl=0.22817 401s
+  [timing] inject=2.2s rollout=641.4s
+[it 4] snaps=30 rollouts=120 spread=+0.280 pg=-0.0587 kl=0.19735 644s
+  [timing] inject=2.8s rollout=387.1s
+[it 5] snaps=32 rollouts=128 spread=+0.127 pg=0.0022 kl=0.12563 390s
+  [timing] inject=2.5s rollout=398.7s
+[it 6] snaps=32 rollouts=128 spread=+0.281 pg=-0.0293 kl=0.09346 401s
+  [timing] inject=2.5s rollout=505.5s
+[it 7] snaps=28 rollouts=112 spread=+0.214 pg=-0.0066 kl=0.16157 508s
+  [timing] inject=2.4s rollout=394.1s
+[it 8] snaps=32 rollouts=128 spread=+0.224 pg=-0.0276 kl=0.11597 396s
+  [timing] inject=2.3s rollout=398.2s
+[it 9] snaps=32 rollouts=128 spread=+0.191 pg=0.0174 kl=0.09780 401s
+  [timing] inject=2.8s rollout=390.6s
+[it 10] snaps=32 rollouts=128 spread=+0.242 pg=-0.0526 kl=0.10937 393s
+[it 10] eval: 胜率 23.0%, 场均 -0.11
+  [timing] inject=2.5s rollout=392.6s
+[it 11] snaps=32 rollouts=128 spread=+0.209 pg=-0.0234 kl=0.16430 395s
+  [timing] inject=2.0s rollout=349.4s
+[it 12] snaps=28 rollouts=112 spread=+0.314 pg=-0.0773 kl=0.11935 351s
+  [timing] inject=2.5s rollout=393.6s
+[it 13] snaps=32 rollouts=128 spread=+0.225 pg=-0.0099 kl=0.23555 396s
+  [timing] inject=2.7s rollout=364.3s
+[it 14] snaps=30 rollouts=120 spread=+0.217 pg=-0.0340 kl=0.11284 367s
+  [timing] inject=2.4s rollout=386.2s
+[it 15] snaps=32 rollouts=128 spread=+0.334 pg=-0.0467 kl=0.11300 389s
+  [timing] inject=2.0s rollout=760.4s
+[it 16] snaps=29 rollouts=116 spread=+0.160 pg=0.0158 kl=0.12536 762s
+  [timing] inject=3.3s rollout=356.3s
+[it 17] snaps=30 rollouts=120 spread=+0.283 pg=-0.0334 kl=0.09110 360s
+  [timing] inject=2.6s rollout=370.6s
+[it 18] snaps=30 rollouts=120 spread=+0.243 pg=0.0016 kl=0.08289 373s
+  [timing] inject=3.0s rollout=698.5s
+[it 19] snaps=31 rollouts=124 spread=+0.221 pg=-0.0264 kl=0.08629 702s
+  [timing] inject=2.4s rollout=368.1s
+[it 20] snaps=30 rollouts=120 spread=+0.278 pg=-0.1014 kl=0.08594 370s
+[it 20] eval: 胜率 23.2%, 场均 -0.18
+  [timing] inject=2.1s rollout=351.8s
+[it 21] snaps=29 rollouts=116 spread=+0.225 pg=-0.1315 kl=0.08382 354s
+  [timing] inject=2.7s rollout=407.0s
+[it 22] snaps=32 rollouts=128 spread=+0.252 pg=0.0086 kl=0.11497 410s
+  [timing] inject=2.6s rollout=383.4s
+[it 23] snaps=31 rollouts=124 spread=+0.286 pg=-0.0368 kl=0.09323 386s
+  [timing] inject=2.2s rollout=374.7s
+[it 24] snaps=31 rollouts=124 spread=+0.131 pg=-0.0231 kl=0.06015 377s
+  [timing] inject=1.9s rollout=523.0s
+[it 25] snaps=25 rollouts=100 spread=+0.286 pg=0.0218 kl=0.09177 525s
+  [timing] inject=2.5s rollout=378.1s
+[it 26] snaps=31 rollouts=124 spread=+0.188 pg=-0.0463 kl=0.09954 381s
+  [timing] inject=2.3s rollout=398.7s
+[it 27] snaps=32 rollouts=128 spread=+0.192 pg=0.0102 kl=0.10373 401s
+  [timing] inject=2.4s rollout=390.3s
+[it 28] snaps=32 rollouts=128 spread=+0.207 pg=-0.0138 kl=0.12118 393s
+  [timing] inject=2.1s rollout=342.7s
+[it 29] snaps=29 rollouts=116 spread=+0.265 pg=-0.0629 kl=0.10230 345s
+  [timing] inject=2.3s rollout=394.8s
+[it 30] snaps=31 rollouts=124 spread=+0.302 pg=-0.0385 kl=0.11976 397s
+[it 30] eval: 胜率 25.5%, 场均 +0.21 ★

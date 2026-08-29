@@ -1,0 +1,41 @@
+初始化: models/dqn_shaped_100k_best.pt
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+[it 1] snaps=32 rollouts=128 spread=+0.209 pg=0.0074 kl=0.00000 1073s
+/opt/conda/envs/python3.10/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+[it 2] snaps=32 rollouts=128 spread=+0.189 pg=-0.0330 kl=0.00855 398s
+[it 3] snaps=32 rollouts=128 spread=+0.260 pg=-0.0203 kl=0.01905 409s
+[it 4] snaps=30 rollouts=120 spread=+0.302 pg=-0.0642 kl=0.01848 681s
+[it 5] snaps=32 rollouts=128 spread=+0.126 pg=0.0157 kl=0.01836 395s
+[it 6] snaps=32 rollouts=128 spread=+0.297 pg=-0.0452 kl=0.01336 399s
+[it 7] snaps=28 rollouts=112 spread=+0.213 pg=-0.0058 kl=0.02078 643s
+[it 8] snaps=32 rollouts=128 spread=+0.196 pg=0.0143 kl=0.01674 405s
+[it 9] snaps=32 rollouts=128 spread=+0.207 pg=0.0262 kl=0.01475 402s
+/home/zuofengrui.zfr/mahjong159/backend/ai/bot_v1.py:65: RuntimeWarning: overflow encountered in scalar multiply
+  score = -100 * o["shanten"] + 3 * wr - 25 * risk
+[it 10] snaps=32 rollouts=128 spread=+0.284 pg=-0.0166 kl=0.01649 403s
+[it 10] eval: 胜率 22.8%, 场均 -0.14
+[it 11] snaps=32 rollouts=128 spread=+0.205 pg=-0.0264 kl=0.01630 394s
+[it 12] snaps=28 rollouts=112 spread=+0.239 pg=-0.0298 kl=0.01231 356s
+[it 13] snaps=32 rollouts=128 spread=+0.249 pg=-0.0002 kl=0.01622 390s
+[it 14] snaps=30 rollouts=120 spread=+0.176 pg=-0.0041 kl=0.00840 375s
+[it 15] snaps=32 rollouts=128 spread=+0.282 pg=-0.0186 kl=0.00851 384s
+[it 16] snaps=29 rollouts=116 spread=+0.185 pg=-0.0038 kl=0.01190 729s
+[it 17] snaps=30 rollouts=120 spread=+0.230 pg=0.0120 kl=0.00903 373s
+[it 18] snaps=30 rollouts=120 spread=+0.245 pg=0.0140 kl=0.00745 365s
+[it 19] snaps=31 rollouts=124 spread=+0.174 pg=-0.0417 kl=0.00831 605s
+[it 20] snaps=30 rollouts=120 spread=+0.228 pg=-0.0485 kl=0.00872 371s
+[it 20] eval: 胜率 27.0%, 场均 +0.33 ★
+[it 21] snaps=29 rollouts=116 spread=+0.259 pg=-0.1209 kl=0.01149 349s
+[it 22] snaps=32 rollouts=128 spread=+0.224 pg=-0.0010 kl=0.01630 404s
+[it 23] snaps=31 rollouts=124 spread=+0.254 pg=-0.0051 kl=0.01766 386s
+[it 24] snaps=31 rollouts=124 spread=+0.172 pg=-0.0173 kl=0.01617 380s
+[it 25] snaps=25 rollouts=100 spread=+0.294 pg=-0.0159 kl=0.01979 584s
+[it 26] snaps=31 rollouts=124 spread=+0.181 pg=-0.0170 kl=0.02491 388s
+[it 27] snaps=32 rollouts=128 spread=+0.235 pg=0.0022 kl=0.01680 395s
+[it 28] snaps=32 rollouts=128 spread=+0.199 pg=-0.0079 kl=0.01286 382s
+[it 29] snaps=29 rollouts=116 spread=+0.274 pg=-0.0620 kl=0.01412 359s
+[it 30] snaps=31 rollouts=124 spread=+0.326 pg=-0.0599 kl=0.01838 397s
+[it 30] eval: 胜率 26.8%, 场均 +0.36 ★

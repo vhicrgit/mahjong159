@@ -1,0 +1,47 @@
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+  [timing] inject=6.8s rollout=317.5s
+[it 1] snaps=32 rollouts=128 spread=+0.124 pg=-0.0309 kl=0.00000 324s
+  [timing] inject=1.9s rollout=141.0s
+[it 2] snaps=32 rollouts=128 spread=+0.124 pg=-0.0351 kl=0.00653 143s
+  [timing] inject=1.7s rollout=138.7s
+[it 3] snaps=32 rollouts=128 spread=+0.149 pg=0.0047 kl=0.00730 141s
+  [timing] inject=1.6s rollout=308.6s
+[it 4] snaps=30 rollouts=120 spread=+0.159 pg=-0.0307 kl=0.00854 310s
+  [timing] inject=2.3s rollout=139.5s
+[it 5] snaps=32 rollouts=128 spread=+0.109 pg=-0.0113 kl=0.00736 142s
+  [timing] inject=1.8s rollout=140.4s
+[it 6] snaps=32 rollouts=128 spread=+0.089 pg=-0.0238 kl=0.00634 142s
+  [timing] inject=1.9s rollout=174.4s
+[it 7] snaps=28 rollouts=112 spread=+0.100 pg=0.0038 kl=0.00807 176s
+  [timing] inject=1.7s rollout=141.1s
+[it 8] snaps=32 rollouts=128 spread=+0.102 pg=-0.0234 kl=0.01565 143s
+  [timing] inject=1.7s rollout=140.7s
+[it 9] snaps=32 rollouts=128 spread=+0.126 pg=0.0127 kl=0.02161 142s
+  [timing] inject=2.1s rollout=143.8s
+[it 10] snaps=32 rollouts=128 spread=+0.096 pg=-0.0088 kl=0.01572 146s
+[it 10] eval: 胜率 24.0%, 场均 -0.01 ★
+  [timing] inject=1.8s rollout=144.5s
+[it 11] snaps=32 rollouts=128 spread=+0.068 pg=-0.0048 kl=0.01492 146s
+  [timing] inject=1.5s rollout=127.1s
+[it 12] snaps=28 rollouts=112 spread=+0.121 pg=-0.0504 kl=0.00691 129s
+  [timing] inject=2.0s rollout=141.9s
+[it 13] snaps=32 rollouts=128 spread=+0.120 pg=-0.0170 kl=0.00595 144s
+  [timing] inject=2.1s rollout=134.7s
+[it 14] snaps=30 rollouts=120 spread=+0.115 pg=-0.0163 kl=0.00688 137s
+  [timing] inject=1.9s rollout=139.5s
+[it 15] snaps=32 rollouts=128 spread=+0.106 pg=-0.0180 kl=0.00855 141s
+  [timing] inject=1.6s rollout=336.6s
+[it 16] snaps=29 rollouts=116 spread=+0.121 pg=-0.0088 kl=0.01634 338s
+  [timing] inject=2.6s rollout=138.0s
+[it 17] snaps=30 rollouts=120 spread=+0.064 pg=-0.0270 kl=0.00940 141s
+  [timing] inject=1.9s rollout=134.8s
+[it 18] snaps=30 rollouts=120 spread=+0.134 pg=-0.0015 kl=0.00720 137s
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+  [timing] inject=18.5s rollout=322.8s
+[it 1] snaps=32 rollouts=128 spread=+0.060 pg=-0.0238 kl=0.00000 341s
+  [timing] inject=4.7s rollout=137.5s
+[it 2] snaps=32 rollouts=128 spread=+0.132 pg=-0.0130 kl=0.00838 142s
+  [timing] inject=1.8s rollout=135.2s
+[it 3] snaps=32 rollouts=128 spread=+0.089 pg=0.0177 kl=0.01506 137s
+  [timing] inject=1.8s rollout=320.5s
+[it 4] snaps=30 rollouts=120 spread=+0.116 pg=-0.0481 kl=0.02005 322s

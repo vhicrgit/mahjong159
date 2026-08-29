@@ -1,0 +1,6 @@
+初始化: models/dqn_shaped_100k_best.pt
+[it 0] init baseline: 胜率 26.0%, 场均 +0.42
+[it 1] snaps=32 rollouts=128 spread=+1.086 pg=-0.1046 kl=0.00959 100s
+[it 2] snaps=32 rollouts=128 spread=+1.336 pg=-0.1905 kl=0.05900 96s
+[it 3] snaps=32 rollouts=128 spread=+1.316 pg=-0.1827 kl=0.11278 109s
+[it 3] eval: 胜率 23.0%, 场均 +0.12

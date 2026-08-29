@@ -1,0 +1,91 @@
+初始化: models/dqn_shaped_100k_best.pt
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+[it 1] snaps=32 rollouts=128 spread=+0.926 pg=-0.0932 kl=0.01618 33s
+[it 2] snaps=32 rollouts=128 spread=+1.072 pg=-0.1601 kl=0.07086 34s
+[it 3] snaps=32 rollouts=128 spread=+1.198 pg=-0.4033 kl=0.11691 33s
+[it 4] snaps=32 rollouts=128 spread=+1.197 pg=-0.1775 kl=0.17256 34s
+[it 5] snaps=29 rollouts=116 spread=+1.129 pg=-0.0675 kl=0.12415 32s
+[it 5] eval: 胜率 23.0%, 场均 -0.10
+[it 6] snaps=32 rollouts=128 spread=+1.216 pg=-0.1208 kl=0.07627 31s
+[it 7] snaps=32 rollouts=128 spread=+1.101 pg=-0.0432 kl=0.05816 34s
+[it 8] snaps=31 rollouts=124 spread=+0.964 pg=-0.1662 kl=0.07231 30s
+[it 9] snaps=30 rollouts=120 spread=+0.858 pg=0.0733 kl=0.06870 30s
+[it 10] snaps=26 rollouts=104 spread=+1.250 pg=-0.2660 kl=0.04388 29s
+[it 10] eval: 胜率 23.2%, 场均 -0.03
+[it 11] snaps=32 rollouts=128 spread=+1.197 pg=-0.2875 kl=0.06095 30s
+[it 12] snaps=32 rollouts=128 spread=+1.175 pg=-0.0719 kl=0.09328 30s
+[it 13] snaps=32 rollouts=128 spread=+1.149 pg=-0.3020 kl=0.08178 31s
+[it 14] snaps=32 rollouts=128 spread=+0.882 pg=-0.0879 kl=0.12128 31s
+[it 15] snaps=32 rollouts=128 spread=+1.215 pg=-0.4063 kl=0.12201 29s
+[it 15] eval: 胜率 23.5%, 场均 -0.19
+[it 16] snaps=30 rollouts=120 spread=+0.925 pg=-0.0034 kl=0.12386 31s
+[it 17] snaps=32 rollouts=128 spread=+1.538 pg=-0.3309 kl=0.09738 28s
+[it 18] snaps=31 rollouts=124 spread=+1.210 pg=-0.1261 kl=0.10219 32s
+[it 19] snaps=32 rollouts=128 spread=+1.227 pg=-0.1826 kl=0.11168 33s
+[it 20] snaps=32 rollouts=128 spread=+0.908 pg=-0.0581 kl=0.07750 37s
+[it 20] eval: 胜率 25.8%, 场均 +0.21 ★
+[it 21] snaps=31 rollouts=124 spread=+0.949 pg=-0.0688 kl=0.09325 32s
+/opt/conda/envs/python3.10/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+初始化: models/dqn_shaped_100k_best.pt
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+[it 1] snaps=32 rollouts=128 spread=+0.926 pg=-0.0932 kl=0.01618 22s
+[it 2] snaps=32 rollouts=128 spread=+1.072 pg=-0.1601 kl=0.07086 20s
+[it 3] snaps=32 rollouts=128 spread=+1.198 pg=-0.4033 kl=0.11691 19s
+[it 4] snaps=32 rollouts=128 spread=+1.197 pg=-0.1775 kl=0.17255 19s
+[it 5] snaps=29 rollouts=116 spread=+1.129 pg=-0.0675 kl=0.12415 19s
+[it 5] eval: 胜率 23.0%, 场均 -0.10
+[it 6] snaps=32 rollouts=128 spread=+1.216 pg=-0.1208 kl=0.07627 18s
+[it 7] snaps=32 rollouts=128 spread=+1.101 pg=-0.0432 kl=0.05816 21s
+[it 8] snaps=31 rollouts=124 spread=+0.964 pg=-0.1662 kl=0.07231 18s
+[it 9] snaps=30 rollouts=120 spread=+0.858 pg=0.0733 kl=0.06870 18s
+[it 10] snaps=26 rollouts=104 spread=+1.250 pg=-0.2660 kl=0.04388 18s
+[it 10] eval: 胜率 23.2%, 场均 -0.03
+[it 11] snaps=32 rollouts=128 spread=+1.197 pg=-0.2875 kl=0.06095 17s
+[it 12] snaps=32 rollouts=128 spread=+1.175 pg=-0.0719 kl=0.09328 18s
+[it 13] snaps=32 rollouts=128 spread=+1.149 pg=-0.3020 kl=0.08178 18s
+[it 14] snaps=32 rollouts=128 spread=+0.882 pg=-0.0879 kl=0.12128 18s
+[it 15] snaps=32 rollouts=128 spread=+1.215 pg=-0.4063 kl=0.12202 18s
+[it 15] eval: 胜率 23.5%, 场均 -0.19
+[it 16] snaps=30 rollouts=120 spread=+0.925 pg=-0.0034 kl=0.12390 18s
+[it 17] snaps=32 rollouts=128 spread=+1.538 pg=-0.3309 kl=0.09741 17s
+[it 18] snaps=31 rollouts=124 spread=+1.210 pg=-0.1261 kl=0.10224 19s
+[it 19] snaps=32 rollouts=128 spread=+1.227 pg=-0.1826 kl=0.11175 21s
+[it 20] snaps=32 rollouts=128 spread=+0.908 pg=-0.0581 kl=0.07751 21s
+[it 20] eval: 胜率 25.8%, 场均 +0.21 ★
+[it 21] snaps=31 rollouts=124 spread=+0.949 pg=-0.0688 kl=0.09322 17s
+[it 22] snaps=30 rollouts=120 spread=+1.144 pg=-0.1961 kl=0.07782 19s
+[it 23] snaps=32 rollouts=128 spread=+1.145 pg=-0.3136 kl=0.07830 18s
+[it 24] snaps=26 rollouts=104 spread=+1.035 pg=-0.2883 kl=0.11187 16s
+[it 25] snaps=32 rollouts=128 spread=+1.256 pg=-0.3542 kl=0.15892 21s
+[it 25] eval: 胜率 22.5%, 场均 -0.17
+[it 26] snaps=32 rollouts=128 spread=+1.114 pg=-0.0451 kl=0.19260 19s
+[it 27] snaps=32 rollouts=128 spread=+1.411 pg=-0.2755 kl=0.16491 18s
+[it 28] snaps=32 rollouts=128 spread=+1.368 pg=-0.2774 kl=0.22407 20s
+[it 29] snaps=29 rollouts=116 spread=+1.464 pg=-0.3670 kl=0.25270 18s
+[it 30] snaps=30 rollouts=120 spread=+1.088 pg=-0.3010 kl=0.18483 19s
+[it 30] eval: 胜率 24.5%, 场均 +0.01
+[it 31] snaps=32 rollouts=128 spread=+1.122 pg=-0.0858 kl=0.27395 18s
+[it 32] snaps=28 rollouts=112 spread=+0.858 pg=-0.0873 kl=0.15041 18s
+[it 33] snaps=31 rollouts=124 spread=+1.089 pg=-0.2537 kl=0.14174 21s
+[it 34] snaps=31 rollouts=124 spread=+1.242 pg=-0.2694 kl=0.11942 17s
+[it 35] snaps=32 rollouts=128 spread=+1.062 pg=-0.2752 kl=0.08578 19s
+[it 35] eval: 胜率 26.5%, 场均 +0.36 ★
+[it 36] snaps=31 rollouts=124 spread=+1.570 pg=-0.3705 kl=0.10968 20s
+[it 37] snaps=30 rollouts=120 spread=+1.179 pg=-0.3881 kl=0.09911 18s
+[it 38] snaps=32 rollouts=128 spread=+1.366 pg=-0.2256 kl=0.11245 19s
+[it 39] snaps=32 rollouts=128 spread=+1.107 pg=-0.1446 kl=0.13869 18s
+[it 40] snaps=32 rollouts=128 spread=+1.036 pg=-0.0213 kl=0.09932 19s
+[it 40] eval: 胜率 27.8%, 场均 +0.50 ★
+[it 41] snaps=26 rollouts=104 spread=+0.912 pg=-0.1784 kl=0.10690 16s
+[it 42] snaps=32 rollouts=128 spread=+1.053 pg=-0.2754 kl=0.08457 19s
+[it 43] snaps=32 rollouts=128 spread=+1.249 pg=-0.1820 kl=0.13905 19s
+[it 44] snaps=30 rollouts=120 spread=+1.254 pg=-0.2521 kl=0.13963 17s
+[it 45] snaps=32 rollouts=128 spread=+1.303 pg=-0.6881 kl=0.10668 19s
+[it 45] eval: 胜率 22.0%, 场均 -0.16
+[it 46] snaps=32 rollouts=128 spread=+1.114 pg=-0.0660 kl=0.09843 20s
+[it 47] snaps=31 rollouts=124 spread=+1.435 pg=-0.3416 kl=0.15041 19s
+[it 48] snaps=32 rollouts=128 spread=+0.940 pg=-0.2045 kl=0.15937 19s
+[it 49] snaps=30 rollouts=120 spread=+1.376 pg=-0.4067 kl=0.14743 18s
+[it 50] snaps=29 rollouts=116 spread=+1.288 pg=-0.2831 kl=0.16736 16s
+[it 50] eval: 胜率 21.8%, 场均 -0.27

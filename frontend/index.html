@@ -15,15 +15,14 @@
       <span id="wall-info">牌堆: -</span>
       <span id="dealer-info">庄家: -</span>
       <button id="btn-sort" class="btn">整理牌</button>
-      <label class="bot-select-label">AI:
-        <select id="bot-kind">
-          <option value="">默认阵容(菜鸟/老鸟/挂哥)</option>
-          <option value="v10">普通(v10)</option>
-          <option value="target">目标概率</option>
-          <option value="cheat_wall">看牌墙</option>
-          <option value="cheat_opp">看牌墙+手牌</option>
-          <option value="cheat_full">全信息</option>
-        </select>
+      <label class="bot-select-label">下家:
+        <select id="bot-kind-1" class="bot-seat-sel"></select>
+      </label>
+      <label class="bot-select-label">对家:
+        <select id="bot-kind-2" class="bot-seat-sel"></select>
+      </label>
+      <label class="bot-select-label">上家:
+        <select id="bot-kind-3" class="bot-seat-sel"></select>
       </label>
       <input id="bot-param" class="bot-param" type="number" min="0" value="64" title="看牌墙张数 / beam 参数">
       <button id="btn-review" class="btn">复盘</button>
@@ -101,6 +100,10 @@
   <aside id="analysis-panel" class="hidden">
     <div class="panel-header">
       <span>牌局分析</span>
+      <label class="rho-ctl">碰牌概率 ρ
+        <input type="range" id="rho-slider" min="0" max="1" step="0.1" value="1">
+        <span id="rho-val">1.0</span>
+      </label>
       <span class="panel-close" onclick="toggleAnalysis()">x</span>
     </div>
     <div id="analysis-content"></div>

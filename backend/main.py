@@ -42,30 +42,7 @@ def _make_ai_bot(g: Game, seat: int):
     kind = _session.get("bot_kind") or os.environ.get("MAHJONG_BOT", "v31")
     param = int(_session.get("bot_param")
                 or os.environ.get("MAHJONG_BOT_PARAM", "0"))
-    if kind in ("v31", "normal"):
-        return Bot(g, seat)
-    if kind == "v10":
-        from .ai.bot_v10 import Bot as B
-        return B(g, seat)
-    if kind == "v1":
-        from .ai.bot_v1 import Bot as B
-        return B(g, seat)
-    if kind == "target":
-        from .ai.bot_target import Bot as B
-        return B(g, seat)
-    if kind == "cheat_wall":
-        from .ai.bot_cheat import Bot as B
-        return B(g, seat, wall_lookahead=param or 32,
-                 see_opponents=False, beam=12, rollout=False)
-    if kind == "cheat_opp":
-        from .ai.bot_cheat import Bot as B
-        return B(g, seat, wall_lookahead=param or 32,
-                 see_opponents=True, beam=12, rollout=False)
-    if kind == "cheat_full":
-        from .ai.bot_cheat import Bot as B
-        return B(g, seat, wall_lookahead=-1, see_opponents=True,
-                 beam=param or 4, rollout=True)
-    return Bot(g, seat)
+    return roster.make_bot(kind, g, seat, param)
 
 
 def _gang_kind(g: Game, seat: int, tile: int) -> str:
@@ -81,6 +58,11 @@ def _build_ai_bots(g: Game) -> dict:
     与手机版保持一致。若显式指定了档位(会话参数 bot_kind 或环境变量
     MAHJONG_BOT), 则三席统一使用该档位, 便于横向评测单一 Bot 强度。
     """
+    seat_kinds = _session.get("bot_kinds")
+    if seat_kinds:
+        param = int(_session.get("bot_param") or 0)
+        return {i: roster.make_bot(seat_kinds.get(i), g, i, param)
+                for i in range(4) if i != g.human_seat}
     if not (_session.get("bot_kind") or os.environ.get("MAHJONG_BOT")):
         return roster.build_bots(g, g.human_seat)
     return {i: _make_ai_bot(g, i) for i in range(4) if i != g.human_seat}
@@ -89,9 +71,23 @@ def _build_ai_bots(g: Game) -> dict:
 def state_with_names(g: Game) -> dict:
     """公开状态 + 每个座位的 AI 名字/说明(供前端显示对手身份)"""
     st = g.public_state(0)
+    seat_kinds = _session.get("bot_kinds")
+    uni = _session.get("bot_kind")
     for p in st["players"]:
-        p["name"] = roster.seat_name(p["seat"])
-        p["bot_desc"] = roster.seat_desc(p["seat"])
+        if p["seat"] == g.human_seat:
+            p["name"] = roster.HUMAN_NAME
+            p["bot_desc"] = "玩家"
+            continue
+        if seat_kinds and p["seat"] in seat_kinds and seat_kinds[p["seat"]]:
+            k = seat_kinds[p["seat"]]
+            p["name"] = roster.kind_name(k)
+            p["bot_desc"] = roster.KIND_INFO.get(k, ("", ""))[1]
+        elif uni:
+            p["name"] = roster.kind_name(uni)
+            p["bot_desc"] = roster.KIND_INFO.get(uni, ("", ""))[1]
+        else:
+            p["name"] = roster.seat_name(p["seat"])
+            p["bot_desc"] = roster.seat_desc(p["seat"])
     return st
 
 
@@ -166,6 +162,7 @@ class NewGameReq(BaseModel):
     dealer: int = 0
     bot_kind: str | None = None
     bot_param: int | None = None
+    bot_kinds: dict[int, str | None] | None = None  # 按座位指定对手 AI
 
 
 class DiscardReq(BaseModel):
@@ -183,9 +180,12 @@ def new_game(req: NewGameReq | None = None):
         g.dealer = req.dealer
         _session["bot_kind"] = req.bot_kind
         _session["bot_param"] = req.bot_param
+        _session["bot_kinds"] = ({int(k): v for k, v in req.bot_kinds.items()}
+                                 if req.bot_kinds else None)
     else:
         _session["bot_kind"] = None
         _session["bot_param"] = None
+        _session["bot_kinds"] = None
     _session["game"] = g
     _session["review_log"] = []
     # 若庄家不是人类, 先推进
@@ -246,13 +246,37 @@ def pass_action():
 
 
 @app.get("/api/analyze")
-def analyze():
+def analyze(rho: float = 1.0):
     g = current_game()
     az = Analyzer(g, g.human_seat)
-    result = {"hand": az.analyze_hand()}
-    # 14张状态(轮到我出牌)时给出打出建议
+    result = {"hand": az.analyze_hand(), "rho": rho}
+    # 14张状态(轮到我出牌)时给出打出建议 + 每张牌的牌型价值(期望巡数)
     if g.phase == "discard_wait" and g.turn == g.human_seat:
-        result["discards"] = az.analyze_discards()
+        discards = az.analyze_discards()
+        try:
+            from .analysis.hand_value import HandAnalyzer
+            p = g.players[g.human_seat]
+            hand = list(p.hand_counts)
+            visible = [0] * 28
+            for q in g.players:
+                for t in q.discards:
+                    visible[t] += 1
+                for m in q.melds:
+                    visible[m["tile"]] += 3 if m["type"] == "peng" else 4
+            for t, n in enumerate(hand):
+                visible[t] += n
+            # 分析面板交互用: 关换型层(秒级->亚秒级, 排序基本不变)
+            hv = HandAnalyzer(hand, visible, rho=rho, kaizen=False)
+            hv0 = HandAnalyzer(hand, visible, rho=0.0, kaizen=False)
+            for o in discards:
+                h = list(hand)
+                h[o["tile"]] -= 1
+                key = (tuple(h), hv.u0)
+                o["hand_value"] = round(hv.E(*key), 2)
+                o["hand_value_np"] = round(hv0.E(*key), 2)
+        except Exception as e:
+            result["hand_value_error"] = str(e)
+        result["discards"] = discards
     return result
 
 

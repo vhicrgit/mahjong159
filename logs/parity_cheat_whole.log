@@ -1,0 +1,3 @@
+  整局(1×cheat_full + 3×v1): 0/1 局不一致
+  cpu: py 437.5s vs native 3.12s -> 140x (3.12 s/局 原生)
+PARITY OK

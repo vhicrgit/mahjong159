@@ -87,17 +87,26 @@ def v10_rollout_scan_fn(sts, step_penalty, max_steps):
 
 v10_rollout_jit = jax.jit(v10_rollout_scan_fn, static_argnames=("max_steps",))
 
-def rollout_v10_jax(sts, meta, step_penalty, max_steps=200, feat_chunk=2048):
-    """v10 规则全 jit 推演, 返回 per-(si,tile) 平均塑形得分(接口同 rollout_jax)。"""
+def rollout_v10_jax(sts, meta, step_penalty, max_steps=200, feat_chunk=512):
+    """v10 规则全 jit 推演, 返回 per-(si,tile) 平均塑形得分(接口同 rollout_jax)。
+    分块调用 v10_rollout_jit, 控制编译图大小(每块形状静态)。"""
     import numpy as np
-    from .rollout import _shaped_from_final
-    from .env159 import load_win_tables
+    from .rollout import _shaped_from_final, slice_state
+    from .env159 import State, load_win_tables
     from .shanten import load_front_table
     load_win_tables()
     load_front_table()
     B = sts.hands.shape[0]
     hero_arr = np.array([h for _, _, h in meta], dtype=np.int32)
-    final_sts, _ = v10_rollout_jit(sts, step_penalty, max_steps)
+    parts = []
+    for c0 in range(0, B, feat_chunk):
+        c1 = min(c0 + feat_chunk, B)
+        part, _ = v10_rollout_jit(slice_state(sts, c0, c1), step_penalty,
+                                  max_steps)
+        parts.append(part)
+    final_sts = parts[0] if len(parts) == 1 else State(**{
+        f: jnp.concatenate([getattr(p, f) for p in parts], axis=0)
+        for f in State._fields})
     winner = final_sts.winner.astype(jnp.int32)
     n159 = final_sts.n_159.astype(jnp.int32)
     draws = final_sts.draws.astype(jnp.float32)

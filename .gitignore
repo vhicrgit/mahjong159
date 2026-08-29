@@ -28,3 +28,7 @@ _*.html
 _*.txt
 _*.png
 _*.jpg
+.venv-jax/
+.jax_cache/
+models/*.bin
+!models/suit_front_table.npz

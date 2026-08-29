@@ -1,0 +1,6 @@
+[it 1] snaps=124 rollouts=496 spread=+2.035 pg=-0.3325 kl=0.09467 364s
+[it 2] snaps=123 rollouts=492 spread=+2.202 pg=-0.3263 kl=0.34404 433s
+[it 3] snaps=127 rollouts=508 spread=+2.277 pg=-0.2836 kl=0.91095 384s
+[it 4] snaps=118 rollouts=472 spread=+2.402 pg=-0.2449 kl=1.11400 543s
+[it 5] snaps=122 rollouts=488 spread=+2.251 pg=-0.1524 kl=1.08756 380s
+[it 5] eval: 胜率 20.8%, 场均 -0.45 ★

@@ -1,0 +1,13 @@
+[10:12:48] start v12_v1n_v31n_s720000
+[10:12:48] start v12_v31n_v31n_s720000
+[10:46:17] done  v12_v1n_v31n_s720000 rc=0
+[10:46:17] start v12_v1n_v31n_s730000
+[11:16:50] done  v12_v1n_v31n_s730000 rc=0
+[11:16:50] start v12_v31n_v31n_s730000
+[12:27:31] done  v12_v31n_v31n_s720000 rc=0
+[12:27:31] start v12_v1n_v31n_s740000
+[13:21:05] done  v12_v31n_v31n_s730000 rc=0
+[13:21:05] start v12_v31n_v31n_s740000
+[15:23:21] done  v12_v31n_v31n_s740000 rc=0
+xargs: bash: terminated by signal 15
+[22:03:04] 全部 v12 run 结束

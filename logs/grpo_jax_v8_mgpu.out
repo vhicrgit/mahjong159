@@ -1,0 +1,47 @@
+初始化: models/dqn_shaped_100k_best.pt
+[it 0] init baseline: 胜率 23.8%, 场均 -0.02
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/jax/_src/ops/scatter.py:108: FutureWarning: scatter inputs have incompatible types: cannot safely cast value from dtype=int32 to dtype=bool with jax_numpy_dtype_promotion='standard'. In future JAX releases this will result in an error.
+  warnings.warn(
+[it 1] snaps=32 rollouts=128 spread=+0.905 pg=-0.0770 kl=0.00000 432s
+/opt/conda/envs/python3.10/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+[it 2] snaps=32 rollouts=128 spread=+0.915 pg=-0.1804 kl=0.00869 183s
+[it 3] snaps=32 rollouts=128 spread=+0.843 pg=-0.1555 kl=0.02700 173s
+[it 4] snaps=30 rollouts=120 spread=+1.002 pg=-0.3015 kl=0.03991 34s
+[it 5] snaps=32 rollouts=128 spread=+0.977 pg=-0.2382 kl=0.08038 40s
+[it 6] snaps=32 rollouts=128 spread=+0.919 pg=-0.3742 kl=0.07443 39s
+[it 7] snaps=28 rollouts=112 spread=+0.869 pg=-0.1473 kl=0.08532 35s
+[it 8] snaps=32 rollouts=128 spread=+0.830 pg=-0.2092 kl=0.10912 40s
+[it 9] snaps=32 rollouts=128 spread=+1.132 pg=-0.1681 kl=0.17055 41s
+[it 10] snaps=32 rollouts=128 spread=+0.835 pg=-0.1104 kl=0.22627 41s
+[it 10] eval: 胜率 21.5%, 场均 -0.30
+[it 11] snaps=32 rollouts=128 spread=+0.946 pg=-0.1983 kl=0.20637 41s
+[it 12] snaps=28 rollouts=112 spread=+1.143 pg=-0.3221 kl=0.20433 36s
+[it 13] snaps=32 rollouts=128 spread=+0.977 pg=-0.2147 kl=0.29324 40s
+[it 14] snaps=30 rollouts=120 spread=+1.077 pg=-0.3270 kl=0.18332 34s
+[it 15] snaps=32 rollouts=128 spread=+1.086 pg=-0.4649 kl=0.36532 41s
+[it 16] snaps=29 rollouts=116 spread=+0.823 pg=-0.1096 kl=0.34474 33s
+[it 17] snaps=30 rollouts=120 spread=+0.912 pg=-0.1196 kl=0.22878 34s
+[it 18] snaps=30 rollouts=120 spread=+1.151 pg=-0.0166 kl=0.25593 35s
+[it 19] snaps=31 rollouts=124 spread=+1.330 pg=-0.4799 kl=0.19737 39s
+[it 20] snaps=30 rollouts=120 spread=+1.116 pg=-0.2373 kl=0.21590 34s
+[it 20] eval: 胜率 25.8%, 场均 +0.18 ★
+[it 21] snaps=29 rollouts=116 spread=+1.113 pg=-0.5537 kl=0.21575 34s
+[it 22] snaps=32 rollouts=128 spread=+0.924 pg=-0.0541 kl=0.21622 40s
+[it 23] snaps=31 rollouts=124 spread=+0.941 pg=-0.2768 kl=0.17990 40s
+[it 24] snaps=31 rollouts=124 spread=+0.946 pg=-0.4630 kl=0.16393 36s
+[it 25] snaps=25 rollouts=100 spread=+1.285 pg=-0.5936 kl=0.20826 34s
+[it 26] snaps=31 rollouts=124 spread=+0.929 pg=-0.2064 kl=0.20828 38s
+[it 27] snaps=32 rollouts=128 spread=+0.913 pg=-0.1471 kl=0.18368 38s
+[it 28] snaps=32 rollouts=128 spread=+0.978 pg=-0.1466 kl=0.14612 39s
+[it 29] snaps=29 rollouts=116 spread=+0.937 pg=-0.3446 kl=0.12753 37s
