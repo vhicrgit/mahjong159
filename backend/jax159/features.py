@@ -25,12 +25,16 @@ def _oh4(n: jax.Array) -> jax.Array:
 
 
 def _meld_counts(melds_tile, melds_kind):
-    """(B,4,4) 副露 -> (B,28) 每牌副露张数 (碰3, 杠4)"""
+    """(B,4) 副露槽 -> (B,28) 每牌副露张数 (碰3, 杠4)。
+
+    [bug修复] scatter 索引曾用 arange(B)[:,None,None] (B,1,1), 与
+    melds_tile (B,4) 广播成 (B,B,4) → 副露计数跨局面串台(污染量随B增大,
+    正是多卡rollout浮点分叉的根因)。应为 arange(B)[:,None] (B,1)。"""
     B = melds_tile.shape[0]
     kind = melds_kind  # 1碰 2明杠 3暗杠 4补杠
-    cnt = jnp.where(kind > 0, jnp.where(kind == 1, 3, 4), 0)  # (B,4,4)
+    cnt = jnp.where(kind > 0, jnp.where(kind == 1, 3, 4), 0)  # (B,4)
     return jnp.zeros((B, 28), dtype=jnp.int32).at[
-        jnp.arange(B)[:, None, None], melds_tile.astype(jnp.int32)
+        jnp.arange(B)[:, None], melds_tile.astype(jnp.int32)
     ].add(cnt.astype(jnp.int32))  # kind==0 时 melds_tile=0 会加0, 无碍
 
 
@@ -49,9 +53,9 @@ def encode_obs(sts: State, seats) -> jax.Array:
 
     # 2. 自己副露 oh4 (28x4)
     my_meld_t = jnp.take_along_axis(
-        sts.melds_tile, seats[:, None, None].astype(jnp.int32), axis=1)
+        sts.melds_tile, seats[:, None, None].astype(jnp.int32), axis=1)[:, 0]
     my_meld_k = jnp.take_along_axis(
-        sts.melds_kind, seats[:, None, None].astype(jnp.int32), axis=1)
+        sts.melds_kind, seats[:, None, None].astype(jnp.int32), axis=1)[:, 0]
     f_self_meld = _oh4(_meld_counts(my_meld_t, my_meld_k)).reshape(B, 112)
 
     # 3. 对手副露 (3 x 28 x 2)
