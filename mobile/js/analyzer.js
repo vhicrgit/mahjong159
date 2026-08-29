@@ -142,9 +142,13 @@ class Analyzer {
       const risk = this.gangRisk(t);
       const waitRemains = waits.reduce((sum, w) => sum + rem[w], 0);
       const ukeire = draws.reduce((sum, w) => sum + rem[w], 0);
-      // 综合分: 向听小优先 >> 有效进张多优先 > 放杠风险低优先
-      // 风险权重从 30 降到 10: 避免风险项反过来压过牌效
-      const score = -100 * s + 3 * ukeire - 10 * risk;
+      // 综合分: 向听小优先 >> 有效进张多优先
+      // 放杠风险已从打分里移除(权重曾为 30 -> 10 -> 0)。
+      // 原因: 159 玩法只能自摸不能点炮, 放杠代价有限, 而风险是按
+      // "这张牌外面还剩几张"估的 —— 手里持一对 -> 外面剩 2 张 -> 风险低,
+      // 单张 -> 外面剩 3 张 -> 风险高, 方向上存在对子偏好, 容易把牌效带偏。
+      // gang_risk 仍然计算并输出, 供分析面板展示参考。
+      const score = -100 * s + 3 * ukeire;
       out.push({
         tile: t,
         name: tileName(t),
