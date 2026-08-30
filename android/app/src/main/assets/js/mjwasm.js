@@ -183,7 +183,65 @@ const MJWasm = (function () {
       return out;
     },
 
+    /** 从 IndexedDB 读出前沿日志(没有或失败返回 null) */
+    async sfReadIDB() {
+      const db = await sfOpen();
+      if (!db) return null;
+      const rec = await new Promise((resolve) => {
+        try {
+          const rq = db.transaction(SF_STORE, "readonly").objectStore(SF_STORE).get(SF_KEY);
+          rq.onsuccess = () => resolve(rq.result || null);
+          rq.onerror = () => resolve(null);
+        } catch (e) { resolve(null); }
+      });
+      if (!rec) return null;
+      const bytes = rec instanceof Uint8Array ? rec : new Uint8Array(rec);
+      return bytes.length >= SF_REC ? bytes : null;
+    },
+    /** 把日志 blob 回放进主线程实例的缓存 */
+    sfLoadBlob(bytes) {
+      if (!ready || typeof X.mj_sf_load !== "function" || !bytes) return;
+      const n = Math.min(bytes.length - (bytes.length % SF_REC), SF_CAP);
+      if (n <= 0) return;
+      mem8.set(bytes.subarray(0, n), X.mj_sf_in_ptr());
+      X.mj_sf_load(n / SF_REC);
+    },
+    /** 导出主线程实例的当前日志(拷出; 没有或不可用返回 null) */
+    sfDumpLog() {
+      if (!ready || typeof X.mj_sf_log_len !== "function") return null;
+      const n = X.mj_sf_log_len();
+      if (n <= 0) return null;
+      const view = new Uint8Array(X.memory.buffer, X.mj_sf_log_ptr(), n * SF_REC);
+      return new Uint8Array(view);   // 拷出来, 免得后续写入被改
+    },
+    /** 把日志 blob 写回 IndexedDB */
+    async sfWriteIDB(bytes) {
+      if (!bytes || !bytes.length) return;
+      const db = await sfOpen();
+      if (!db) return;
+      try {
+        db.transaction(SF_STORE, "readwrite").objectStore(SF_STORE).put(bytes, SF_KEY);
+      } catch (e) { /* 写失败无妨 */ }
+    },
+
     /** 暴露纯 JS 实现, 供对拍测试 */
     _js: jsImpl,
   };
 })();
+
+/* ================= 分花色前沿缓存落盘的辅助(IndexedDB) ================= */
+const SF_DB = "mj159_sf", SF_STORE = "kv", SF_KEY = "suit_front_log_v1";
+const SF_REC = 15, SF_CAP = (1 << 18) * SF_REC;   // 与 C 侧 SF_LOG_MAX 一致
+
+function sfOpen() {
+  return new Promise((resolve) => {
+    if (typeof indexedDB === "undefined") return resolve(null);
+    try {
+      const req = indexedDB.open(SF_DB, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(SF_STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+

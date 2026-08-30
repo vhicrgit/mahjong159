@@ -331,6 +331,7 @@ function render() {
   const statusEl = document.getElementById("status");
   if (game.phase === "game_over") {
     statusEl.innerHTML = "";
+    sfPersist();          // 一局打完顺手落盘(新增的前沿条目)
     showResult();
   } else if (game.phase === "discard_wait" && game.turn === 0) {
     statusEl.innerHTML = "轮到你出牌 <span class='hint-dim'>" + (game.lastAction || "") + "</span>";
@@ -1067,10 +1068,35 @@ if (hvKaiSel) {
 // 初始化失败(旧 WebView / wasm 被禁)时自动降级为纯 JS, 功能不受影响。
 // MJWorker 并行初始化, 不影响开局速度: 它只管分析面板的后台 E 计算,
 // 没就绪就回退到主线程的 MJWasm。
+// 分花色前沿缓存落盘: 启动回放(两个 wasm 实例都暖), 终局/切后台时保存
+async function sfWarmStart() {
+  try {
+    const blob = await MJWasm.sfReadIDB();
+    if (!blob) return;
+    MJWasm.sfLoadBlob(blob);
+    if (typeof MJWorker !== "undefined" && MJWorker.ok) MJWorker.sfLoad(blob);
+  } catch (e) { /* 落盘不可用不影响游戏 */ }
+}
+async function sfPersist() {
+  try {
+    let blob = null;
+    if (typeof MJWorker !== "undefined" && MJWorker.ok) blob = await MJWorker.sfDump();
+    if (!blob) blob = MJWasm.sfDumpLog();
+    if (blob) await MJWasm.sfWriteIDB(blob);
+  } catch (e) { /* 同上 */ }
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", () => { sfPersist(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") sfPersist();
+  });
+}
+
 MJWasm.init().then((ok) => {
   if (!ok) console.warn("wasm 规则核心未启用, 降级为纯 JS(学者档会很慢)");
   MJWorker.init().then((wok) => {
     if (!wok) console.warn("MJWorker 未启用, 期望巡数回主线程算(高换型档会卡)");
+    sfWarmStart();
   });
   newGame();
 });

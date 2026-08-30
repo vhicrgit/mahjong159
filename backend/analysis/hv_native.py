@@ -1,13 +1,14 @@
-"""mjcore.c(手机 wasm 规则核心) 的原生 ctypes 封装 —— 桌面端 C 版牌型价值 E。
+"""牌型价值 E 引擎的桌面原生封装 —— 双后端自适应。
 
-mjcore.c 里已有完整的 HandAnalyzer.E C 移植(为 wasm 所做, 与 Python/JS 逐位一致),
-桌面侧直接编译同一源文件为 libmjcore.so 复用, 不另写一份。
+后端优先级:
+  1. libmj159.so(93MB LUT 查表向听, 最快; 由 backend/native/mj159.c 编译)
+  2. libmjcore.so(自包含 DFS 向听, 与手机 wasm 同一份 mjcore.c;
+    缺查表的环境回退)
+两个后端的 E 引擎共享同一份 mobile/wasm/hv_engine_inc.c, 语义与
+backend/analysis/hand_value.py 逐位一致(对拍: tools/perf/test_hv_c_parity.py)。
 
-用途: tools/hand_value.py 的弃牌表在 kai_max=2 换型下 Python 要数十秒,
-C 版单手毫秒级, 整表亚秒。
-
-注意: 与 backend/native/libmj159.so 是两个独立自包含的核(mjcore 无大表、
-可编 wasm); 别合并, mj159 的表驱动版仍是 bot 对战的主力。
+用途: tools/hand_value.py 的弃牌表在换型层下 Python 要数十秒,
+C 引擎整表秒级。
 """
 
 import ctypes
@@ -19,10 +20,10 @@ _ROOT = os.path.dirname(os.path.dirname(_HERE))
 _SO = os.path.join(_HERE, "libmjcore.so")
 _SRC = os.path.join(_ROOT, "mobile", "wasm", "mjcore.c")
 
-_LIB = None
+_STATE = {"lib": None, "kind": None, "tried": False}
 
 
-def _compile():
+def _compile_mjcore():
     tmp = f"{_SO}.{os.getpid()}.tmp"
     cmd = ["cc", "-O3", "-fPIC", "-shared", "-o", tmp, _SRC]
     if os.environ.get("MJ_NATIVE_MARCH", "1") == "1":
@@ -35,19 +36,11 @@ def _compile():
             os.unlink(tmp)
 
 
-def lib():
-    """加载 libmjcore.so; 源文件更新或缺失时自动重编。编译失败返回 None
-    (调用方回退 Python 实现)。"""
-    global _LIB
-    if _LIB is not None:
-        return _LIB
-    try:
-        if (not os.path.exists(_SO)
-                or os.path.getmtime(_SO) < os.path.getmtime(_SRC)):
-            _compile()
-        L = ctypes.CDLL(_SO)
-    except Exception:
-        return None
+def _load_mjcore():
+    if (not os.path.exists(_SO)
+            or os.path.getmtime(_SO) < os.path.getmtime(_SRC)):
+        _compile_mjcore()
+    L = ctypes.CDLL(_SO)
     i8p = ctypes.POINTER(ctypes.c_int8)
     L.mjc_hv_set2.argtypes = [i8p, i8p, ctypes.c_double, ctypes.c_int,
                               ctypes.c_int, ctypes.c_int, ctypes.c_int]
@@ -63,8 +56,43 @@ def lib():
                                      ctypes.POINTER(ctypes.c_double),
                                      ctypes.POINTER(ctypes.c_int)]
     L.mjc_hv_explain_buf.restype = ctypes.c_int
-    _LIB = L
     return L
+
+
+def lib():
+    """返回 (lib, kind): kind = "mj159" | "mjcore"。两库都不可用返回 None。"""
+    if _STATE["tried"]:
+        return _STATE["lib"]
+    _STATE["tried"] = True
+    # 优先 mj159(查表, 快)。native.py 的 lib() 负责建表 + 初始化。
+    try:
+        from ..native import native
+        L = native.lib()
+        i8p = ctypes.POINTER(ctypes.c_int8)
+        L.mj_hv_set2.argtypes = [i8p, i8p, ctypes.c_double, ctypes.c_int,
+                                 ctypes.c_int, ctypes.c_int, ctypes.c_int]
+        L.mj_hv_set2.restype = ctypes.c_int
+        L.mj_hv_e_after_discard.argtypes = [ctypes.c_int]
+        L.mj_hv_e_after_discard.restype = ctypes.c_double
+        L.mj_hv_explain_buf.argtypes = [ctypes.c_int,
+                                        ctypes.POINTER(ctypes.c_double),
+                                        ctypes.POINTER(ctypes.c_int)]
+        L.mj_hv_explain_buf.restype = ctypes.c_int
+        _STATE["lib"], _STATE["kind"] = L, "mj159"
+        return L
+    except Exception:
+        pass
+    try:
+        L = _load_mjcore()
+        _STATE["lib"], _STATE["kind"] = L, "mjcore"
+        return L
+    except Exception:
+        return None
+
+
+def backend_kind() -> str:
+    lib()
+    return _STATE["kind"] or "none"
 
 
 def _i8(counts28):
@@ -77,26 +105,39 @@ def set_hand(hand28, visible28, rho=1.0, kaizen=True,
     L = lib()
     if L is None:
         return False
-    L.mjc_hv_set2(_i8(hand28), _i8(visible28), float(rho), int(kaizen),
-                  int(kai_margin), int(kai_max), int(kai_topk))
+    fn = L.mj_hv_set2 if _STATE["kind"] == "mj159" else L.mjc_hv_set2
+    fn(_i8(hand28), _i8(visible28), float(rho), int(kaizen),
+       int(kai_margin), int(kai_max), int(kai_topk))
     return True
 
 
 def e_after_discard(tile: int) -> float:
-    return lib().mjc_hv_e_after_discard(int(tile))
+    L = lib()
+    fn = L.mj_hv_e_after_discard if _STATE["kind"] == "mj159" \
+        else L.mjc_hv_e_after_discard
+    return fn(int(tile))
 
 
 def choose_discard() -> int:
-    return lib().mjc_hv_choose_discard()
+    L = lib()
+    fn = L.mj_hv_choose_discard if _STATE["kind"] == "mj159" \
+        else L.mjc_hv_choose_discard
+    return fn()
 
 
 def decide_peng(tile: int) -> bool:
-    return bool(lib().mjc_hv_decide_peng(int(tile)))
+    L = lib()
+    fn = L.mj_hv_decide_peng if _STATE["kind"] == "mj159" \
+        else L.mjc_hv_decide_peng
+    return bool(fn(int(tile)))
 
 
 def decide_gang(tile: int, kind: str) -> bool:
     k = {"ming": 0, "an": 1, "bu": 2}[kind]
-    return bool(lib().mjc_hv_decide_gang(int(tile), k))
+    L = lib()
+    fn = L.mj_hv_decide_gang if _STATE["kind"] == "mj159" \
+        else L.mjc_hv_decide_gang
+    return bool(fn(int(tile), k))
 
 
 def explain(tile: int) -> dict | None:
@@ -107,7 +148,9 @@ def explain(tile: int) -> dict | None:
         return None
     outf = (ctypes.c_double * 8)()
     outi = (ctypes.c_int * 192)()
-    rc = L.mjc_hv_explain_buf(int(tile), outf, outi)
+    fn = L.mj_hv_explain_buf if _STATE["kind"] == "mj159" \
+        else L.mjc_hv_explain_buf
+    rc = fn(int(tile), outf, outi)
     if rc != 0:
         return None
     q = 0

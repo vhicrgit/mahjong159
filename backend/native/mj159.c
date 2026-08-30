@@ -718,3 +718,42 @@ void mj_shanten_batch(const int8_t *hands, int n, int32_t *out) {
 void mj_is_win_batch(const int8_t *hands, int n, int32_t *out) {
     for (int i = 0; i < n; i++) out[i] = mj_is_win(hands + (size_t)i * 28);
 }
+
+/* ================= 牌型价值 E 引擎 =================
+ * 引擎本体与 mobile/wasm/mjcore.c 共享同一份 hv_engine_inc.c,
+ * 本宿主注入查表版原语(mj_shanten/mj_is_win 走 93MB LUT, 比 DFS 快 5-10 倍)。
+ * 语义与 backend/analysis/hand_value.py 逐位一致;
+ * 改动后跑 tools/perf/test_hv_c_parity.py 对拍。 */
+typedef int8_t i8;
+typedef uint8_t u8;
+typedef uint32_t u32;
+typedef uint64_t u64;
+#define NTILE 28
+
+static inline u64 key27(const i8 *c) {
+    int a = 0, b = 0, d = 0;
+    for (int i = 8; i >= 0; i--) a = a * 5 + c[i];
+    for (int i = 17; i >= 9; i--) b = b * 5 + c[i];
+    for (int i = 26; i >= 18; i--) d = d * 5 + c[i];
+    return (u64)a | ((u64)b << 21) | ((u64)d << 42);
+}
+
+#define HV_SHANTEN(c) mj_shanten(c)
+#define HV_IS_WIN(c)  mj_is_win(c)
+#define HV_KEY27(c)   key27(c)
+#include "../../mobile/wasm/hv_engine_inc.c"
+
+int mj_hv_set2(const int8_t *hand, const int8_t *visible, double rho,
+               int kaizen, int kai_margin, int kai_max, int kai_topk) {
+    hve_set_ctx(hand, visible, rho, kaizen, kai_margin, kai_max, kai_topk);
+    return 0;
+}
+double mj_hv_e_after_discard(int tile) { return hve_e_after_discard(tile); }
+int mj_hv_choose_discard(void) { return hve_choose_discard(); }
+int mj_hv_decide_peng(int tile) { return hve_decide_peng(tile); }
+int mj_hv_decide_gang(int tile, int kind) { return hve_decide_gang(tile, kind); }
+int mj_hv_explain_buf(int tile, double *outf, int *outi) {
+    return hve_explain(tile, outf, outi);
+}
+void mj_hv_stats(uint64_t *out) { hve_stats(out); }
+void mj_hv_stats_reset(void) { hve_stats_reset(); }

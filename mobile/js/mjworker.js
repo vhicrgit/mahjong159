@@ -144,6 +144,29 @@ const MJWorker = (() => {
           setup(d.hc, d.vis, d.rho, d.kai);
           const e = X.mj_hv_e_after_discard(d.tile);
           self.postMessage({ id: d.id, e, ms: Date.now() - t0 });
+        } else if (d.cmd === "sf_load") {
+          // 主线程转交的分花色前沿日志: 写入回放区并回放(暖 worker 自己的缓存)
+          if (typeof X.mj_sf_load === "function") {
+            const bytes = new Uint8Array(d.bytes);
+            const m = new Int8Array(X.memory.buffer);
+            const ptr = X.mj_sf_in_ptr();
+            const cap = typeof X.mj_sf_in_cap === "function"
+              ? X.mj_sf_in_cap() : (1 << 18) * 15;
+            const n = Math.min(bytes.length, cap);
+            for (let i = 0; i < n; i++) m[ptr + i] = bytes[i];
+            X.mj_sf_load((n / 15) | 0);
+          }
+          self.postMessage({ id: d.id, ok: true });
+        } else if (d.cmd === "sf_dump") {
+          // 导出当前缓存日志(拷出再传, wasm 内存还会继续被写)
+          if (typeof X.mj_sf_log_len === "function") {
+            const n = X.mj_sf_log_len() * 15;
+            const out = new Uint8Array(n);
+            out.set(new Uint8Array(X.memory.buffer, X.mj_sf_log_ptr(), n));
+            self.postMessage({ id: d.id, bytes: out.buffer }, [out.buffer]);
+          } else {
+            self.postMessage({ id: d.id, bytes: null });
+          }
         } else if (d.cmd === "explain") {
           setup(d.hc, d.vis, d.rho, d.kai);
           if (typeof X.mj_hv_explain !== "function" || X.mj_hv_explain(d.tile) !== 0) {
@@ -246,6 +269,20 @@ const MJWorker = (() => {
       if (hc[tile] <= 0) return null;
       const r = await post({ cmd: "e", hc, vis, rho, kai: kaiMax || 0, tile });
       return r.e;
+    },
+
+    /** 载入分花色前沿日志(暖 worker 的缓存; 静默失败) */
+    async sfLoad(bytes) {
+      if (!ready || !bytes) return;
+      try { await post({ cmd: "sf_load", bytes }, 30000); } catch (e) {}
+    },
+    /** 导出 worker 的前沿日志(供落盘); 未就绪或失败返回 null */
+    async sfDump() {
+      if (!ready) return null;
+      try {
+        const r = await post({ cmd: "sf_dump" }, 30000);
+        return r.bytes ? new Uint8Array(r.bytes) : null;
+      } catch (e) { return null; }
     },
 
     /** 候选行的展开解释。返回 Promise<object|null>。 */

@@ -89,6 +89,21 @@ def lib():
                                    ctypes.POINTER(ctypes.c_int32)]
     L.mj_is_win_batch.argtypes = [i8p, ctypes.c_int,
                                   ctypes.POINTER(ctypes.c_int32)]
+    # 牌型价值 E 引擎(与 mjcore.c 共享 hv_engine_inc.c)
+    L.mj_hv_set2.argtypes = [i8p, i8p, ctypes.c_double, ctypes.c_int,
+                             ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    L.mj_hv_set2.restype = ctypes.c_int
+    L.mj_hv_e_after_discard.argtypes = [ctypes.c_int]
+    L.mj_hv_e_after_discard.restype = ctypes.c_double
+    L.mj_hv_choose_discard.restype = ctypes.c_int
+    L.mj_hv_decide_peng.argtypes = [ctypes.c_int]
+    L.mj_hv_decide_peng.restype = ctypes.c_int
+    L.mj_hv_decide_gang.argtypes = [ctypes.c_int, ctypes.c_int]
+    L.mj_hv_decide_gang.restype = ctypes.c_int
+    L.mj_hv_explain_buf.argtypes = [ctypes.c_int,
+                                    ctypes.POINTER(ctypes.c_double),
+                                    ctypes.POINTER(ctypes.c_int)]
+    L.mj_hv_explain_buf.restype = ctypes.c_int
 
     front = os.environ.get("MJ_FRONT_BIN",
                            os.path.join(_ROOT, "models", "mj_front.bin"))

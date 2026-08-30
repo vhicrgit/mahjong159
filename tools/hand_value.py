@@ -188,7 +188,9 @@ def main():
                               args.kaizen_margin, args.kaizen_max,
                               args.kaizen_topk)
                              for d in range(28) if hand[d] > 0]
-                    ctx = mp.get_context("spawn")
+                    # fork: 复用父进程已加载的 C 库与热 memo, 起进程 ~50ms;
+                    # spawn 每个子进程要重新 import + 加载库(~1.5s), 不划算
+                    ctx = mp.get_context("fork")
                     with ctx.Pool(args.procs) as pool:
                         rets = pool.map(_c_worker, tasks)
                     e0s = {d: e0 for d, e0, _e1 in rets}
@@ -244,7 +246,8 @@ def main():
             rhos = [0.0, 0.3, 0.6, 1.0]
             azs = [HandAnalyzer(hand, visible, rho=r, kaizen=args.kaizen,
                                 kai_margin=args.kaizen_margin,
-                                kai_max=args.kaizen_max) for r in rhos]
+                                kai_max=args.kaizen_max,
+                                kai_topk=args.kaizen_topk) for r in rhos]
             print(f"{'打出':>5s} " + " ".join(f"ρ={r:<4.1f}" for r in rhos))
             for d in range(28):
                 if hand[d] <= 0:
@@ -283,8 +286,12 @@ def main():
         print("可碰对子:      " + " ".join(
             f"{tile_name(t)}×{az.u0[t]}(权重×{1+3*rho:.0f}→碰后打{tile_name(d)})"
             for t, (w, d, bs) in sorted(pengs.items())))
-    e_tot = az.E(tuple(hand13), az.u0)
-    e_np = az0.E(tuple(hand13), az.u0)
+    # C 引擎时最优候选的双口径 E 已在弃牌表算过, 直接复用, 不再用 Python 重算
+    if ntile % 3 == 2 and c_es is not None:
+        e_np, e_tot = c_es[0][best], c_es[1][best]
+    else:
+        e_tot = az.E(tuple(hand13), az.u0)
+        e_np = az0.E(tuple(hand13), az.u0)
     print(f"\n>>> 期望巡数到胡: {e_tot:.2f} (带碰) / {e_np:.2f} (纯自摸) "
           f"| Δ碰 = {e_np - e_tot:+.2f}")
 
