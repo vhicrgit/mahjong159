@@ -14,8 +14,13 @@
   命中后按 v10 牌效打出最优一张, 递归到新牌型。听牌后有效张=胡牌张,
   收敛到 (N+1)/(W+1)。ρ=0(纯自摸)时与 MC 单人模拟同口径, 已验证。
 - 换型层(默认开, --no-kaizen 关闭): 摸到不降向听但让有效张变宽 ≥2 的牌
-  也算一次进展(最多连续 2 次)。修正"改良盲"偏差 —— 无此层时系统性偏高
-  ~+0.6 巡; 加上后与 MC 的偏差降到 ±0.1 以内(tools/perf/feas_kaizen.py)。
+  也算一次进展。预算按整条路径计(kai_max 次, 不随降向听重置), 每状态只保留
+  进张净增最多的 kai_topk 个分支 —— 旧版"连续次数重置"语义会让高向听手牌的
+  DP 状态爆炸到 64 万(单手 280s), 截断后 C 引擎整表秒级。修正"改良盲"偏差:
+  无此层时系统性偏高 ~+0.6 巡(tools/perf/feas_kaizen.py)。
+- 计算引擎: 默认走 C(libmjcore.so, 由 mobile/wasm/mjcore.c 编译, 与 Python
+  逐位一致, 对拍见 tools/perf/test_hv_c_parity.py); --engine py 回退 Python;
+  --procs N 按候选多核并行(kai_max=2 全表 18s -> ~7s)。
 - 牌型枚举: DFS n 进张内可达的和牌型, 按所需组合聚合展示(含独立期望)。
 
 输出 E[带碰] 与 E[纯自摸] 双口径, Δ碰 表示这副牌多依赖碰牌。
@@ -100,6 +105,22 @@ def build_from_args(args):
     return hand, visible, "手动输入"
 
 
+def _c_worker(payload):
+    """多核 worker: 一个候选牌的 (rho, 0) 双口径 E。spawn 子进程各自加载 C 库,
+    memo 互不相通(共享 memo 无法跨进程, 各候选独享一份)。"""
+    (hand, visible, d, rho, kaizen, kai_margin, kai_max, kai_topk) = payload
+    from backend.analysis import hv_native
+    hv_native.set_hand(hand, visible, rho=rho, kaizen=kaizen,
+                       kai_margin=kai_margin, kai_max=kai_max,
+                       kai_topk=kai_topk)
+    e1 = hv_native.e_after_discard(d)
+    hv_native.set_hand(hand, visible, rho=0.0, kaizen=kaizen,
+                       kai_margin=kai_margin, kai_max=kai_max,
+                       kai_topk=kai_topk)
+    e0 = hv_native.e_after_discard(d)
+    return d, e0, e1
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=None)
@@ -125,8 +146,14 @@ def main():
                     help="关掉换型层")
     ap.add_argument("--kaizen-margin", type=int, default=2,
                     help="换型判定的进张放宽阈值")
-    ap.add_argument("--kaizen-max", type=int, default=2,
-                    help="最多连续换型次数")
+    ap.add_argument("--kaizen-max", type=int, default=1,
+                    help="每条路径的换型预算(全局, 不重置); 2 更准但慢 ~10 倍")
+    ap.add_argument("--kaizen-topk", type=int, default=6,
+                    help="每状态最多保留的换型分支数(按进张净增排序); 0=不截断")
+    ap.add_argument("--engine", choices=["auto", "c", "py"], default="auto",
+                    help="E 的计算引擎: auto=优先 C(libmjcore, 毫秒级), py=纯 Python")
+    ap.add_argument("--procs", type=int, default=1,
+                    help="C 引擎下按候选并行计算的进程数(换型层下全表可 4-5 倍提速)")
     ap.add_argument("--mc", type=int, default=5000, help="MC 模拟局数, 0=跳过")
     ap.add_argument("--max-pattern-time", type=int, default=12)
     args = ap.parse_args()
@@ -134,9 +161,11 @@ def main():
     rho = 0.0 if args.no_peng_x4 else args.rho
     hand, visible, desc = build_from_args(args)
     az = HandAnalyzer(hand, visible, rho=rho, kaizen=args.kaizen,
-                      kai_margin=args.kaizen_margin, kai_max=args.kaizen_max)
+                      kai_margin=args.kaizen_margin, kai_max=args.kaizen_max,
+                      kai_topk=args.kaizen_topk)
     az0 = HandAnalyzer(hand, visible, rho=0.0, kaizen=args.kaizen,
-                       kai_margin=args.kaizen_margin, kai_max=args.kaizen_max)
+                       kai_margin=args.kaizen_margin, kai_max=args.kaizen_max,
+                       kai_topk=args.kaizen_topk)
 
     print(f"=== {desc} ===")
     print(f"手牌({sum(hand)}张): {' '.join(tile_name(t) for t in range(28) for _ in range(hand[t]))}")
@@ -147,7 +176,41 @@ def main():
     ntile = sum(hand)
     if ntile % 3 == 2:
         # 待出牌状态: 每张候选的期望巡数, 碰/不碰双口径
-        print("\n=== 各弃牌候选的期望巡数(越小越好) ===")
+        # C 引擎(libmjcore): 换型层下整表亚秒; 不可用时回退 Python
+        c_es = None
+        if args.engine in ("auto", "c"):
+            from backend.analysis import hv_native
+            if args.procs > 1:
+                # 多核: 只探测库可用性, 计算全在子进程
+                if hv_native.lib() is not None:
+                    import multiprocessing as mp
+                    tasks = [(hand, visible, d, rho, args.kaizen,
+                              args.kaizen_margin, args.kaizen_max,
+                              args.kaizen_topk)
+                             for d in range(28) if hand[d] > 0]
+                    ctx = mp.get_context("spawn")
+                    with ctx.Pool(args.procs) as pool:
+                        rets = pool.map(_c_worker, tasks)
+                    e0s = {d: e0 for d, e0, _e1 in rets}
+                    e1s = {d: e1 for d, _e0, e1 in rets}
+                    c_es = (e0s, e1s)
+            elif hv_native.set_hand(hand, visible, rho=rho, kaizen=args.kaizen,
+                                    kai_margin=args.kaizen_margin,
+                                    kai_max=args.kaizen_max,
+                                    kai_topk=args.kaizen_topk):
+                e1s = {d: hv_native.e_after_discard(d)
+                       for d in range(28) if hand[d] > 0}
+                # rho 一切换就清 C 侧 memo, 所以按 rho 分两遍算
+                hv_native.set_hand(hand, visible, rho=0.0,
+                                   kaizen=args.kaizen,
+                                   kai_margin=args.kaizen_margin,
+                                   kai_max=args.kaizen_max,
+                                   kai_topk=args.kaizen_topk)
+                e0s = {d: hv_native.e_after_discard(d)
+                       for d in range(28) if hand[d] > 0}
+                c_es = (e0s, e1s)
+        print("\n=== 各弃牌候选的期望巡数(越小越好) ==="
+              + ("  [C 引擎]" if c_es else "  [Python 引擎]"))
         print(f"{'打出':>5s} {'向听':>4s} {'有效张':>6s} "
               f"{'E[无碰]':>8s} {'E[带碰]':>8s} {'Δ碰':>7s}")
         rows = []
@@ -158,8 +221,11 @@ def main():
             hd = list(hand)
             hd[d] -= 1
             key = (tuple(hd), az.u0)
-            e0 = az0.E(*key)
-            e1 = az.E(*key)
+            if c_es is not None:
+                e0, e1 = c_es[0][d], c_es[1][d]
+            else:
+                e0 = az0.E(*key)
+                e1 = az.E(*key)
             s = native.shanten(hd)
             _, uf = az._useful(key[0], az.u0)
             rows.append((d, s, sum(uf.values()), e0, e1))

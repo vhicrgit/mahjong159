@@ -320,3 +320,21 @@ html, body {
   border: 1px solid #c9c4b0; border-radius: 3px; flex-shrink: 0;
 }
 #ting-hint .wait-tile svg { width: 92%; height: 92%; display: block; }
+
+/* 分析面板的换型档位选择 */
+.panel-tools { display: flex; align-items: center; gap: 10px; }
+.kai-select-label { font-size: 12px; color: #a8dadc; font-weight: normal; }
+.kai-select-label select {
+  background: #0f3460; color: #eee; border: 1px solid #1a5a8a;
+  border-radius: 4px; font-size: 12px; padding: 1px 4px; margin-left: 3px;
+}
+
+/* 分析面板候选行的解释展开 */
+.discard-suggest.clickable { cursor: pointer; flex-wrap: wrap; }
+.hv-detail {
+  flex-basis: 100%; margin-top: 4px; padding: 6px 8px;
+  background: rgba(15,52,96,.45); border-radius: 6px;
+  font-size: 11px; line-height: 1.7; color: #cfd8e3;
+}
+.hv-detail-row { margin: 1px 0; }
+.hv-detail-diff { color: #ffd166; }

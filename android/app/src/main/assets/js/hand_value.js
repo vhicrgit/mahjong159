@@ -80,7 +80,11 @@ class HandAnalyzer {
    * @param {object} [opts]
    *   rho     对手摸到你要碰的牌后实际打出来的概率。1=一定打, 0=纯自摸
    *   kaizen  换型层开关(Bot 对战用 false)
-   *   kaiMargin / kaiMax  换型判定阈值与最大连续换型次数(防环)
+   *   kaiMargin / kaiMax  换型判定阈值与每条路径的最大换型次数(全局预算,
+   *           不随降向听重置; 若按连续次数重置会让高向听手牌 DP 图爆炸)
+   *   kaiTopk 每状态最多保留的换型分支数(按进张净增排序)。换型层会让
+   *           DP 状态数从 ~16 爆炸到 ~64 万(单手 0.04s -> 280s), 必须截断;
+   *           传 0 表示不截断(仅调试用)
    */
   constructor(hand, visibleCounts, opts) {
     const o = opts || {};
@@ -93,7 +97,8 @@ class HandAnalyzer {
     this.rho = o.rho !== undefined ? o.rho : 1.0;
     this.kaizen = o.kaizen !== undefined ? o.kaizen : true;
     this.kaiMargin = o.kaiMargin !== undefined ? o.kaiMargin : 2;
-    this.kaiMax = o.kaiMax !== undefined ? o.kaiMax : 2;
+    this.kaiMax = o.kaiMax !== undefined ? o.kaiMax : 1;
+    this.kaiTopk = o.kaiTopk !== undefined ? o.kaiTopk : 6;
     this.memo = new Map();
   }
 
@@ -195,6 +200,7 @@ class HandAnalyzer {
       const uk0 = this._ukeire(hand, u);
       const inUseful = new Set();
       for (const [t] of useful) inUseful.add(t);
+      const cands = [];
       for (let t = 0; t < 28; t++) {
         if (u[t] <= 0 || inUseful.has(t)) continue;
         const h14 = hand.slice();
@@ -202,10 +208,16 @@ class HandAnalyzer {
         const d = this._fastDiscard(h14, u);
         h14[d]--;
         if (shanten(h14) !== s) continue;
-        if (this._ukeire(h14, u) >= uk0 + this.kaiMargin) {
-          kaiTiles.push([t, u[t], h14]);
+        const gain = this._ukeire(h14, u) - uk0;
+        if (gain >= this.kaiMargin) {
+          cands.push([gain, t, u[t], h14]);
         }
       }
+      // 只保留进张净增最多的 kaiTopk 个分支(状态爆炸的保险丝)
+      // 排序与 Python 的 (-gain, -w) 稳定排序(t 升序插入)完全一致
+      cands.sort((a, b) => (b[0] - a[0]) || (b[2] - a[2]) || (a[1] - b[1]));
+      const cap = this.kaiTopk > 0 ? this.kaiTopk : cands.length;
+      for (const [, t, w, h2] of cands.slice(0, cap)) kaiTiles.push([t, w, h2]);
     }
 
     let N = 0;
@@ -236,7 +248,9 @@ class HandAnalyzer {
       u2[t]--;
       const d = this._fastDiscard(h14, u2);
       h14[d]--;
-      val += p * this.E(h14, u2, 0);
+      // kai 透传: 换型预算按整条路径计(不重置), 否则每个状态都能
+      // 花一次预算, 高向听手牌的 DP 图会爆炸(实测 139s/手)
+      val += p * this.E(h14, u2, kai);
     }
 
     for (const [t, w, h2] of kaiTiles) {  // 换型通道: 不降向听但进张变宽
@@ -253,7 +267,7 @@ class HandAnalyzer {
       const u2 = u.slice();
       u2[t]--;
       h2[d]--;
-      val += p * this.E(h2, u2, 0);
+      val += p * this.E(h2, u2, kai);
     }
 
     this.memo.set(key, val);

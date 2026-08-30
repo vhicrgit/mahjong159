@@ -659,6 +659,71 @@ function showResult() {
 // ---------- 分析面板 ----------
 // 代数计数器: 局面一变就作废上一次未完成的异步 E 计算
 let hvGen = 0;
+// 换型层深度(0/1/2): 越大越准越慢。默认关; C 内核下 1 档整表秒级
+let hvKaiMax = 0;
+try {
+  const saved = parseInt(localStorage.getItem("hv_kai_max"));
+  if (saved === 0 || saved === 1 || saved === 2) hvKaiMax = saved;
+} catch (e) { /* 隐私模式等场景没有 localStorage, 用默认 */ }
+
+// 候选行的解释展开状态(tile 级); 换型档位或局面变了缓存就作废
+const hvDetailOpen = new Set();
+const hvExplainCache = {};   // tile -> {gen, kai, data}
+
+function hvExplainGet(tile) {
+  const c = hvExplainCache[tile];
+  if (c && c.gen === hvGen && c.kai === hvKaiMax) return c.data;
+  const data = MJWasm.hvExplain(game, 0, 1.0, tile, hvKaiMax);
+  hvExplainCache[tile] = { gen: hvGen, kai: hvKaiMax, data };
+  return data;
+}
+
+function hvDetailToggle(tile) {
+  if (hvDetailOpen.has(tile)) hvDetailOpen.delete(tile);
+  else hvDetailOpen.add(tile);
+  if (lastAnalysis) renderAnalysis(lastAnalysis);   // 不动 hvGen, 不重算
+}
+
+/** 单个候选的解释明细: E 构成 + 三通道列表 + 与最优候选的分量差 */
+function hvDetailHtml(data, d) {
+  const ex = hvExplainGet(d.tile);
+  if (!ex) return '<div class="hv-detail">解释数据不可用(wasm 未就绪)</div>';
+  const f2 = (x) => (Math.round(x * 100) / 100).toFixed(2);
+  let html = '<div class="hv-detail">';
+  html += `<div class="hv-detail-row">构成: 等待 ${f2(ex.wait)} + 自摸 ${f2(ex.cUseful)}`
+        + ` + 换型 ${f2(ex.cKai)} + 碰 ${f2(ex.cPeng)}</div>`;
+  if (ex.useful.length) {
+    const tot = ex.useful.reduce((a, b) => a + b[1], 0);
+    html += `<div class="hv-detail-row">有效张(${tot}): `
+          + ex.useful.map(([t, w]) => `${tileName(t)}×${w}`).join(" ") + "</div>";
+  }
+  if (ex.kai.length) {
+    html += `<div class="hv-detail-row">改良牌: `
+          + ex.kai.map(([t, w, g]) => `${tileName(t)}(进张+${g})`).join(" ")
+          + "</div>";
+  }
+  if (ex.peng.length) {
+    html += `<div class="hv-detail-row">可碰对子: `
+          + ex.peng.map(([t]) => tileName(t)).join(" ") + "</div>";
+  }
+  // 与最优候选的分量差(归因)
+  const bestTile = data.rec_hv;
+  if (bestTile !== undefined && bestTile !== d.tile) {
+    const bx = hvExplainGet(bestTile);
+    if (bx) {
+      const diff = ex.E - bx.E;
+      const parts = [["等待", ex.wait - bx.wait], ["自摸", ex.cUseful - bx.cUseful],
+                     ["换型", ex.cKai - bx.cKai], ["碰", ex.cPeng - bx.cPeng]]
+        .filter(([, v]) => Math.abs(v) >= 0.005)
+        .map(([k, v]) => `${k} ${v >= 0 ? "+" : ""}${f2(v)}`);
+      html += `<div class="hv-detail-row hv-detail-diff">对比最优(打${tileName(bestTile)}): `
+            + `慢 ${diff >= 0 ? "+" : ""}${f2(diff)} 巡`
+            + (parts.length ? ` ← ${parts.join(", ")}` : "") + "</div>";
+    }
+  }
+  html += "</div>";
+  return html;
+}
 
 function refreshAnalysis() {
   if (!game || game.phase === "game_over") { lastAnalysis = null; return; }
@@ -708,7 +773,7 @@ async function computeHandValueAsync(data, gen) {
     await nextFrame();
     if (gen !== hvGen) return;             // 局面已变, 丢弃本次结果
     const d = data.discards[i];
-    const e = MJWasm.hvEAfterDiscard(game, 0, 1.0, d.tile);
+    const e = MJWasm.hvEAfterDiscard(game, 0, 1.0, d.tile, hvKaiMax);
     if (e !== null && e >= 0) {
       d.hv_e = Math.round(e * 100) / 100;
       if (e < bestE) { bestE = e; best = d.tile; }
@@ -780,7 +845,9 @@ function renderAnalysis(data) {
       const d = data.discards[i];
       const rpct = Math.round(d.gang_risk * 100);
       const isHv = data.rec_hv !== undefined && d.tile === data.rec_hv;
-      html += `<div class="discard-suggest${i === 0 ? " best" : ""}${isHv ? " hv-best" : ""}">`;
+      const open = hvDetailOpen.has(d.tile);
+      html += `<div class="discard-suggest clickable${i === 0 ? " best" : ""}${isHv ? " hv-best" : ""}"`
+            + ` onclick="hvDetailToggle(${d.tile})">`;
       html += makeTileEl(d.tile, "sm").outerHTML;
       html += '<div class="info">';
       if (d.shanten === 0 && d.waits.length) {
@@ -805,7 +872,9 @@ function renderAnalysis(data) {
         const rcls = d.gang_risk > 0.5 ? "risk-high" : (d.gang_risk > 0.2 ? "risk-mid" : "risk-low");
         html += `<div class="risk-bar"><div class="risk-fill ${rcls}" style="width:${rpct}%"></div></div>`;
       }
-      html += "</div></div>";
+      html += "</div>";
+      if (open) html += hvDetailHtml(data, d);
+      html += "</div>";
     }
     html += "</div>";
   }
@@ -877,6 +946,16 @@ document.getElementById("close-analysis").onclick = () => {
 };
 document.getElementById("close-review").onclick = () =>
   document.getElementById("review-panel").classList.add("hidden");
+// 换型档位: 切换后按新口径重算期望巡数
+const hvKaiSel = document.getElementById("hv-kai");
+if (hvKaiSel) {
+  hvKaiSel.value = String(hvKaiMax);
+  hvKaiSel.onchange = () => {
+    hvKaiMax = parseInt(hvKaiSel.value) || 0;
+    try { localStorage.setItem("hv_kai_max", String(hvKaiMax)); } catch (e) {}
+    refreshAnalysis();
+  };
+}
 
 // 先等 wasm 规则核心就绪再开局 —— 必须异步: 主线程上同步编译 >4KB 的 wasm 会被浏览器拒绝。
 // 初始化失败(旧 WebView / wasm 被禁)时自动降级为纯 JS, 功能不受影响。

@@ -92,7 +92,12 @@
 
   <!-- 分析面板(底部抽屉) -->
   <div id="analysis-panel" class="hidden">
-    <div class="panel-header"><span>牌局分析</span><span class="close" id="close-analysis">x</span></div>
+    <div class="panel-header"><span>牌局分析</span><span class="panel-tools"><label class="kai-select-label">换型
+      <select id="hv-kai" title="换型层深度: 越大越准越慢">
+        <option value="0" selected>关</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+      </select></label><span class="close" id="close-analysis">x</span></span></div>
     <div id="analysis-content"></div>
   </div>
 

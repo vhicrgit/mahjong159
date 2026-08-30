@@ -38,3 +38,6 @@ mobile/wasm/_bench
 .jax_cache/
 models/*.bin
 !models/suit_front_table.npz
+
+# mjcore 原生编译产物(由 backend/analysis/hv_native.py 自动生成)
+backend/analysis/libmjcore.so

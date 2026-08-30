@@ -62,7 +62,9 @@ const MJWasm = (function () {
 
   /* ---- 学者Bot 的 wasm 快路径 ---- */
   // 把某座位的手牌与可见牌写入 wasm, 口径与 bot_hv.js 的 _analyzer() 一致
-  function hvSetup(game, seat, rho) {
+  // kaiMax: 换型预算(0=关)。需要新版 wasm 的 mj_hv_set2; 旧版 wasm 的换型
+  // 语义是"连续次数重置", 高向听手牌会 DP 爆炸, 所以旧版一律退回 kaizen=0。
+  function hvSetup(game, seat, rho, kaiMax) {
     const visible = new Array(28).fill(0);
     for (const q of game.players) {
       for (const t of q.discards) visible[t]++;
@@ -72,7 +74,12 @@ const MJWasm = (function () {
     for (let t = 0; t < 28; t++) visible[t] += hc[t];
     put(P1, hc);
     put(P2, visible);
-    X.mj_hv_set(rho, 0);            // kaizen=0: 与 bot_hv 对战口径一致
+    if (typeof X.mj_hv_set2 === "function") {
+      // (rho, kaizen, kaiMargin, kaiMax, kaiTopk)
+      X.mj_hv_set2(rho, kaiMax > 0 ? 1 : 0, 2, kaiMax, 6);
+    } else {
+      X.mj_hv_set(rho, 0);
+    }
   }
 
   const GANG_KIND = { ming: 0, an: 1, bu: 2 };
@@ -148,11 +155,32 @@ const MJWasm = (function () {
       hvSetup(game, seat, rho);
       return !!X.mj_hv_decide_gang(tile, GANG_KIND[kind] !== undefined ? GANG_KIND[kind] : 0);
     },
-    /** 打出某张后的期望巡数(分析面板可用); 未就绪返回 null */
-    hvEAfterDiscard(game, seat, rho, tile) {
+    /** 打出某张后的期望巡数(分析面板可用); kaiMax=换型预算(0/1/2); 未就绪返回 null */
+    hvEAfterDiscard(game, seat, rho, tile, kaiMax) {
       if (!ready) return null;
-      hvSetup(game, seat, rho);
+      hvSetup(game, seat, rho, kaiMax || 0);
       return X.mj_hv_e_after_discard(tile);
+    },
+    /** E 的通道分解 + 明细(自摸/换型/碰)。需要新版 wasm; 未就绪返回 null */
+    hvExplain(game, seat, rho, tile, kaiMax) {
+      if (!ready || typeof X.mj_hv_explain !== "function") return null;
+      hvSetup(game, seat, rho, kaiMax || 0);
+      if (X.mj_hv_explain(tile) !== 0) return null;
+      // 视图直指 wasm 内存, 必须立即把值拷出来(下一次调用会覆盖)
+      const f8 = new Float64Array(X.memory.buffer, X.mj_outf_ptr(), 8);
+      const i32 = new Int32Array(X.memory.buffer, X.mj_outi_ptr(), 192);
+      const out = { E: f8[0], wait: f8[1], cUseful: f8[2], cKai: f8[3],
+                    cPeng: f8[4], useful: [], kai: [], peng: [] };
+      let q = 0;
+      const nu = i32[q++];
+      for (let i = 0; i < nu; i++) { out.useful.push([i32[q], i32[q + 1]]); q += 2; }
+      const nk = i32[q++];
+      for (let i = 0; i < nk; i++) {
+        out.kai.push([i32[q], i32[q + 1], i32[q + 2]]); q += 3;
+      }
+      const np = i32[q++];
+      for (let i = 0; i < np; i++) { out.peng.push([i32[q], i32[q + 1] / 1000]); q += 2; }
+      return out;
     },
 
     /** 暴露纯 JS 实现, 供对拍测试 */

@@ -34,19 +34,36 @@ def useful_set(hand) -> list[int]:
 
 class HandAnalyzer:
     def __init__(self, hand, visible_counts, rho=1.0,
-                 kaizen=True, kai_margin=2, kai_max=2):
+                 kaizen=True, kai_margin=2, kai_max=1, kai_topk=6,
+                 memo=None, u_eff=None, held_exp=None):
         """hand: 28 计数(当前手牌, 3k+1 或 3k+2 张)。
         visible_counts: 28 计数, 所有可见牌(自己手牌+所有人弃牌+所有副露)。
         rho: 对手摸到你要碰的牌后实际打出来的概率。1.0 = 一定打, 0.0 = 纯自摸。
         kaizen: 换型层 —— 摸到不降向听但让有效张变宽 >= kai_margin 的牌也算进展,
-        最多连续 kai_max 次(防环; 池子单调缩小保证终止)。"""
+        每条路径最多 kai_max 次(全局预算, 不因降向听而重置 —— 若按"连续次数"
+        重置, 每个状态都能花一次预算, 高向听手牌的 DP 图会爆炸, 实测 139s/手)。
+        kai_topk: 每个状态最多保留的换型分支数(按进张净增排序) —— 换型层
+        会让 DP 状态数从 ~16 爆炸到 ~64 万(单手 0.04s -> 280s), 必须截断;
+        0 或 None 表示不截断(仅调试用)。
+        memo: 可选外部 dict, 作为 E 的跨实例共享缓存(key 含全部参数)。
+        u_eff: 可选 28 向量(允许小数) —— 牌墙中各类牌的期望剩余张数,
+        替代默认的均匀假设 u0 = 4 - visible。来自对手牌型分析器:
+        u_eff[t] = 不可见[t] - 对手持有期望[t]。只影响自摸/换型通道。
+        held_exp: 可选 28 向量 —— 三家对手合计持有各类牌的期望张数。
+        给了它, 碰通道权重从 u[t]*3ρ(均匀假设)改为 held_exp[t]*3ρ(按牌细化)。
+        两者都不给时行为与旧版完全一致。"""
         self.hand0 = tuple(hand)
         self.u0 = tuple(max(0, 4 - v) for v in visible_counts)
+        self.u_eff = (tuple(float(x) for x in u_eff) if u_eff is not None
+                      else tuple(float(x) for x in self.u0))
+        self.held_exp = tuple(float(x) for x in held_exp) \
+            if held_exp is not None else None
         self.rho = rho
         self.kaizen = kaizen
         self.kai_margin = kai_margin
         self.kai_max = kai_max
-        self.memo = {}
+        self.kai_topk = kai_topk or 99
+        self.memo = memo if memo is not None else {}
 
     # ---------- 有效张(自摸通道) ----------
     def _useful(self, hand, u):
@@ -67,8 +84,16 @@ class HandAnalyzer:
         s = native.shanten(list(hand))
         out = {}
         for t in range(27):          # 红中不能被碰
-            if hand[t] != 2 or u[t] <= 0:
+            if hand[t] != 2:
                 continue
+            if self.held_exp is not None:
+                if self.held_exp[t] <= 0:
+                    continue
+                wt = self.held_exp[t] * 3.0 * self.rho
+            else:
+                if u[t] <= 0:
+                    continue
+                wt = u[t] * 3.0 * self.rho
             h2 = list(hand)
             h2[t] -= 2
             # 碰后须打一张: 找最优弃牌(最小向听, 同向听取进张最宽)
@@ -82,7 +107,7 @@ class HandAnalyzer:
                 if sd < best_s:
                     best_s, best_d = sd, d
             if best_s < s:
-                out[t] = (u[t] * 3.0 * self.rho, best_d, best_s)
+                out[t] = (wt, best_d, best_s)
         return out
 
     def _fast_discard(self, h14, u):
@@ -91,19 +116,14 @@ class HandAnalyzer:
         return native.choose_discard_v10(h14, u, zeros, 0.0,
                                          100.0, 1.0, 0.0, 0.0, -1)
 
-    # ---------- 期望巡数(递推; 巡=轮到自己行动的周期, 碰不消耗摸牌但占一巡) ----------
-    def E(self, hand, u, kai=0) -> float:
-        key = (hand, u, kai)
-        v = self.memo.get(key)
-        if v is not None:
-            return v
-        s = native.shanten(list(hand))
-        useful = [(t, u[t]) for t in useful_set(hand) if u[t] > 0]
-        pengs = self._peng_transitions(hand, u)
+    def _kai_candidates(self, hand, u, useful, s):
+        """换型候选: [(t, w, gain, h2)], 已按 (-gain,-w) 排序并截断 topk。
+        E 与 decompose 共用, 保证口径一致。"""
         kai_tiles = []
-        if self.kaizen and kai < self.kai_max:
+        if self.kaizen:
             uk0 = self._ukeire(hand, u)
             u0s = set(t for t, _ in useful)
+            cands = []
             for t in range(28):
                 if u[t] <= 0 or t in u0s:
                     continue
@@ -113,8 +133,29 @@ class HandAnalyzer:
                 h14[d] -= 1
                 if native.shanten(h14) != s:
                     continue
-                if self._ukeire(h14, u) >= uk0 + self.kai_margin:
-                    kai_tiles.append((t, u[t], tuple(h14)))
+                gain = self._ukeire(h14, u) - uk0
+                if gain >= self.kai_margin:
+                    cands.append((gain, t, u[t], tuple(h14)))
+            # 只保留进张净增最多的 kai_topk 个分支(状态爆炸的保险丝)
+            cands.sort(key=lambda x: (-x[0], -x[2]))
+            kai_tiles = cands[: self.kai_topk]
+        return kai_tiles
+
+    # ---------- 期望巡数(递推; 巡=轮到自己行动的周期, 碰不消耗摸牌但占一巡) ----------
+    def E(self, hand, u, kai=0) -> float:
+        key = (hand, u, kai, self.rho, self.kaizen,
+               self.kai_margin, self.kai_max, self.kai_topk,
+               self.held_exp)
+        v = self.memo.get(key)
+        if v is not None:
+            return v
+        s = native.shanten(list(hand))
+        useful = [(t, u[t]) for t in useful_set(hand) if u[t] > 0]
+        pengs = self._peng_transitions(hand, u)
+        kai_tiles = []
+        if self.kaizen and kai < self.kai_max:
+            kai_tiles = [(t, w, h2) for _g, t, w, h2
+                         in self._kai_candidates(hand, u, useful, s)]
         N = sum(u)
         U = (sum(w for _, w in useful) + sum(w for _, w, _ in kai_tiles)
              + sum(w for w, _, _ in pengs.values()))
@@ -134,7 +175,9 @@ class HandAnalyzer:
             u2[t] -= 1
             d = self._fast_discard(h14, u2)
             h14[d] -= 1
-            val += p * self.E(tuple(h14), tuple(u2), 0)
+            # kai 透传: 换型预算按整条路径计(不重置), 否则每个状态都能
+            # 花一次预算, 高向听手牌的 DP 图会爆炸(实测 139s/手)
+            val += p * self.E(tuple(h14), tuple(u2), kai)
         for t, w, h2 in kai_tiles:         # 换型通道: 不降向听但进张变宽
             p = w / U
             u2 = list(u)
@@ -147,9 +190,68 @@ class HandAnalyzer:
             u2 = list(u)
             u2[t] -= 1
             h2[d] -= 1
-            val += p * self.E(tuple(h2), tuple(u2), 0)
+            val += p * self.E(tuple(h2), tuple(u2), kai)
         self.memo[key] = val
         return val
+
+    # ---------- E 的通道分解(可解释输出, 与 C mj_hv_explain 同口径) ----------
+    def decompose(self, hand) -> dict:
+        """hand: 3k+1 计数(出牌后状态)。返回:
+        E/wait/c_useful/c_kai/c_peng 五个分量(E = 四项之和, 与 E() 同序累加),
+        useful=[(t,剩余)], kai=[(t,剩余,净增)], peng=[(t,权重)] 明细。"""
+        hand = tuple(hand)
+        u = self.u_eff
+        s = native.shanten(list(hand))
+        useful = [(t, u[t]) for t in useful_set(hand) if u[t] > 0]
+        pengs = self._peng_transitions(hand, u)
+        kai_tiles = self._kai_candidates(hand, u, useful, s) \
+            if self.kai_max > 0 else []
+        N = sum(u)
+        U = (sum(w for _, w in useful)
+             + sum(w for _g, _t, w, _h in kai_tiles)
+             + sum(w for w, _, _ in pengs.values()))
+        cU = cK = cP = 0.0
+        if U <= 0:
+            wait = float(N) + 2.0 * s
+            total = wait
+        else:
+            wait = (N + 1.0) / (U + 1.0)
+            total = wait
+            for t, w in useful:
+                p = w / U
+                h14 = list(hand)
+                h14[t] += 1
+                if native.is_win(h14):
+                    continue
+                u2 = list(u)
+                u2[t] -= 1
+                d = self._fast_discard(h14, u2)
+                h14[d] -= 1
+                c = p * self.E(tuple(h14), tuple(u2), 0)
+                total += c
+                cU += c
+            for _g, t, w, h2 in kai_tiles:
+                p = w / U
+                u2 = list(u)
+                u2[t] -= 1
+                c = p * self.E(h2, tuple(u2), 1)
+                total += c
+                cK += c
+            for t, (w, d, _bs) in pengs.items():
+                p = w / U
+                h2 = list(hand)
+                h2[t] -= 2
+                u2 = list(u)
+                u2[t] -= 1
+                h2[d] -= 1
+                c = p * self.E(tuple(h2), tuple(u2), 0)
+                total += c
+                cP += c
+        return {"E": total, "wait": wait, "c_useful": cU, "c_kai": cK,
+                "c_peng": cP, "useful": useful,
+                "kai": [(t, w, g) for g, t, w, _h in kai_tiles],
+                "peng": [(t, w) for t, (w, _d, _s) in pengs.items()],
+                "shanten": s}
 
     # ---------- n 进张内可达和牌型 ----------
     def enum_patterns(self, start_hand, max_draws):

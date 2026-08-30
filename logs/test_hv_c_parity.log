@@ -1,0 +1,21 @@
+  kai_max=1 case0 ok (14.3s)
+  kai_max=1 case1 ok (16.1s)
+  kai_max=1 case2 ok (20.2s)
+  kai_max=1 case3 ok (1.4s)
+  kai_max=1 case4 ok (0.3s)
+  kai_max=1 case5 ok (10.6s)
+  kai_max=1 case6 ok (0.6s)
+  kai_max=1 case7 ok (1.2s)
+  kai_max=1 case8 ok (4.1s)
+  kai_max=1 case9 ok (21.8s)
+  kai_max=1 case10 ok (3.1s)
+kai_max=1: 11 手牌对拍完毕, 累计不一致 0
+  kai_max=2 case0 ok (101.8s)
+  kai_max=2 case1 ok (119.5s)
+  kai_max=2 case2 ok (197.3s)
+  kai_max=2 case3 ok (7.1s)
+  kai_max=2 case4 ok (1.5s)
+kai_max=2: 5 手牌对拍完毕, 累计不一致 0
+C 整表 kai_max=1: 2636ms  最优: 5饼=15.15 3饼=15.18 3条=15.78
+C 整表 kai_max=2: 18528ms  最优: 5饼=14.65 3饼=14.70 3条=14.98
+OK
