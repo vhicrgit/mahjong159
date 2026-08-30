@@ -63,8 +63,13 @@ class _Seat:
         return self._hv().decide_gang(tile, kind)
 
 
-def rollout_states(model, n_games, seed0, keep, bloody, temp, seed):
-    """网络自对弈, 按 keep 概率留下决策点的 (feat, hand, visible)。"""
+def rollout_states(model, n_games, seed0, keep, bloody, temp, seed,
+                   policy="nn"):
+    """自对弈, 按 keep 概率留下决策点的 (feat, hand, visible)。
+
+    policy="nn" 用网络走(DAgger 要的自身分布); "v31n" 用规则 bot 走(提供
+    分布广度 —— 网络自己的轨迹会越走越窄)。
+    """
     rng = np.random.default_rng(seed)
     games = [Game(seed=seed0 + i, human_seat=-1, bloody=bloody)
              for i in range(n_games)]
@@ -81,20 +86,25 @@ def rollout_states(model, n_games, seed0, keep, bloody, temp, seed):
         gs = [games[i] for i in idx]
         ss = [games[i].turn for i in idx]
         feats = np.stack([encode_state(g, s) for g, s in zip(gs, ss)])
-        masks = torch.stack([legal_discard_mask(g.players[s].hand_counts)
-                             for g, s in zip(gs, ss)])
-        x = torch.from_numpy(feats)
-        with torch.no_grad():
-            q, _ = model(x)
-            p = torch.softmax(q.masked_fill(~masks, -1e9) / max(temp, 1e-6),
-                              dim=-1)
-            a = torch.multinomial(p, 1).squeeze(-1).numpy()
+        if policy == "nn":
+            masks = torch.stack([legal_discard_mask(g.players[s].hand_counts)
+                                 for g, s in zip(gs, ss)])
+            x = torch.from_numpy(feats)
+            with torch.no_grad():
+                q, _ = model(x)
+                p = torch.softmax(
+                    q.masked_fill(~masks, -1e9) / max(temp, 1e-6), dim=-1)
+                acts = torch.multinomial(p, 1).squeeze(-1).numpy()
+        else:
+            from backend.ai.bot_native import NativeV31
+            acts = [NativeV31(g, s).choose_discard()
+                    for g, s in zip(gs, ss)]
         for k, i in enumerate(idx):
             g, s = games[i], ss[k]
             if rng.random() < keep:
                 out.append((feats[k], list(g.players[s].hand_counts),
                             visible_of(g, s)))
-            g.action_discard(s, int(a[k]))
+            g.action_discard(s, int(acts[k]))
     return out
 
 
@@ -112,21 +122,29 @@ def _react_hv(g, model):
 
 
 def _label_chunk(payload):
-    """纯 C 打标签: 返回 (best_tile, best_E)。fork 安全(不碰 torch)。"""
+    """纯 C 打标签: 返回 (best_tile, best_E, 整条 E 向量)。fork 安全(不碰 torch)。
+
+    整条 E 向量也存下来: kai=1 一条标签要 ~0.8s, 只留 argmax 等于把 28 个数
+    里的 27 个扔掉, 而软标签(softmax(-E/τ))每条样本的信息量高得多。
+    """
     hands, vises, kai = payload
-    bt, be = [], []
+    bt, be, ev = [], [], []
     for hand, vis in zip(hands, vises):
         hv_native.set_hand(hand, vis, 1.0, kai > 0, 2, kai, 6)
+        es = np.full(TILE_COUNT, np.nan, dtype=np.float32)
         best_e, best_t = 1e18, -1
         for t in range(TILE_COUNT):
             if hand[t] <= 0:
                 continue
             e = hv_native.e_after_discard(t)
+            es[t] = e
             if e < best_e:
                 best_e, best_t = e, t
         bt.append(best_t)
         be.append(best_e)
-    return np.array(bt, dtype=np.int8), np.array(be, dtype=np.float32)
+        ev.append(es)
+    return (np.array(bt, dtype=np.int8), np.array(be, dtype=np.float32),
+            np.stack(ev))
 
 
 def main():
@@ -135,6 +153,8 @@ def main():
     ap.add_argument("--games", type=int, default=3000)
     ap.add_argument("--keep", type=float, default=0.35)
     ap.add_argument("--kai", type=int, default=1, help="标签的换型档位")
+    ap.add_argument("--rollout", choices=["nn", "v31n"], default="nn",
+                    help="用谁走出状态分布(nn=DAgger 自身分布, v31n=广度)")
     ap.add_argument("--procs", type=int, default=8)
     ap.add_argument("--temp", type=float, default=1.0)
     ap.add_argument("--bloody", action="store_true", default=True)
@@ -150,24 +170,29 @@ def main():
 
     t0 = time.time()
     st = rollout_states(model, args.games, args.seed0, args.keep,
-                        args.bloody, args.temp, seed=1)
-    print(f"网络自对弈 {args.games} 局 -> {len(st)} 个状态  "
+                        args.bloody, args.temp, seed=1,
+                        policy=args.rollout)
+    print(f"{args.rollout} 自对弈 {args.games} 局 -> {len(st)} 个状态  "
           f"{time.time() - t0:.0f}s", flush=True)
 
     feats = np.stack([s[0] for s in st])
     hands = [s[1] for s in st]
     vises = [s[2] for s in st]
-    per = (len(st) + args.procs - 1) // args.procs
+    # 小块 + chunksize=1 让 pool 自己均衡负载: 用"每 worker 一大块"时
+    # 整轮被最慢的那块拖住(实测 9 块里 2 块跑到 75 分钟其余早已结束)
+    per = 200
     tasks = [(hands[i:i + per], vises[i:i + per], args.kai)
              for i in range(0, len(st), per)]
     t0 = time.time()
     with mp.get_context("fork").Pool(args.procs) as pool:
-        rets = pool.map(_label_chunk, tasks)
+        rets = pool.map(_label_chunk, tasks, chunksize=1)
     bests = np.concatenate([r[0] for r in rets])
     labels = np.concatenate([r[1] for r in rets])
+    evec = np.concatenate([r[2] for r in rets])
     print(f"标签 kai={args.kai} × {args.procs} 进程  {time.time() - t0:.0f}s")
 
-    np.savez_compressed(args.out, feats=feats, labels=labels, bests=bests)
+    np.savez_compressed(args.out, feats=feats, labels=labels, bests=bests,
+                        evec=evec)
     print(f"已存 {args.out}  {len(bests)} 条  E: 均 {labels.mean():.2f} "
           f"标准差 {labels.std():.2f}")
 

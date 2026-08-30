@@ -1,0 +1,44 @@
+models/k0_nn.npz: 103934 条 (验证 5196) 软标签
+models/k0_v31.npz: 55046 条 (验证 2752) 软标签
+训练样本(加权后) 151032   权重 [1.0, 1.0]
+epoch  1 loss 1.9029 | k0_nn.npz 命中 0.4702 | k0_v31.npz 命中 0.4764 
+epoch  2 loss 1.5741 | k0_nn.npz 命中 0.5108 | k0_v31.npz 命中 0.5102 
+epoch  3 loss 1.4837 | k0_nn.npz 命中 0.5221 | k0_v31.npz 命中 0.5432 
+epoch  4 loss 1.4195 | k0_nn.npz 命中 0.5429 | k0_v31.npz 命中 0.5618 
+epoch  5 loss 1.3729 | k0_nn.npz 命中 0.5308 | k0_v31.npz 命中 0.5621 
+epoch  6 loss 1.3409 | k0_nn.npz 命中 0.5420 | k0_v31.npz 命中 0.5709 
+epoch  7 loss 1.3128 | k0_nn.npz 命中 0.5585 | k0_v31.npz 命中 0.5883 
+epoch  8 loss 1.2886 | k0_nn.npz 命中 0.5614 | k0_v31.npz 命中 0.5894 
+epoch  9 loss 1.2670 | k0_nn.npz 命中 0.5589 | k0_v31.npz 命中 0.5865 
+epoch 10 loss 1.2501 | k0_nn.npz 命中 0.5666 | k0_v31.npz 命中 0.5908 
+epoch 11 loss 1.2334 | k0_nn.npz 命中 0.5677 | k0_v31.npz 命中 0.5970 
+epoch 12 loss 1.2176 | k0_nn.npz 命中 0.5739 | k0_v31.npz 命中 0.6032 
+epoch 13 loss 1.2017 | k0_nn.npz 命中 0.5739 | k0_v31.npz 命中 0.6097 
+epoch 14 loss 1.1907 | k0_nn.npz 命中 0.5706 | k0_v31.npz 命中 0.6054 
+epoch 15 loss 1.1760 | k0_nn.npz 命中 0.5716 | k0_v31.npz 命中 0.6137 
+epoch 16 loss 1.1613 | k0_nn.npz 命中 0.5803 | k0_v31.npz 命中 0.6086 
+epoch 17 loss 1.1519 | k0_nn.npz 命中 0.5770 | k0_v31.npz 命中 0.6148 
+epoch 18 loss 1.1397 | k0_nn.npz 命中 0.5781 | k0_v31.npz 命中 0.6123 
+epoch 19 loss 1.1272 | k0_nn.npz 命中 0.5781 | k0_v31.npz 命中 0.6152 
+epoch 20 loss 1.1163 | k0_nn.npz 命中 0.5833 | k0_v31.npz 命中 0.6243 
+epoch 21 loss 1.1064 | k0_nn.npz 命中 0.5812 | k0_v31.npz 命中 0.6079 
+epoch 22 loss 1.0976 | k0_nn.npz 命中 0.5781 | k0_v31.npz 命中 0.6174 
+epoch 23 loss 1.0870 | k0_nn.npz 命中 0.5814 | k0_v31.npz 命中 0.6225 
+epoch 24 loss 1.0802 | k0_nn.npz 命中 0.5835 | k0_v31.npz 命中 0.6217 
+epoch 25 loss 1.0711 | k0_nn.npz 命中 0.5843 | k0_v31.npz 命中 0.6192 
+epoch 26 loss 1.0636 | k0_nn.npz 命中 0.5855 | k0_v31.npz 命中 0.6246 
+epoch 27 loss 1.0557 | k0_nn.npz 命中 0.5841 | k0_v31.npz 命中 0.6188 
+epoch 28 loss 1.0501 | k0_nn.npz 命中 0.5806 | k0_v31.npz 命中 0.6145 
+epoch 29 loss 1.0443 | k0_nn.npz 命中 0.5862 | k0_v31.npz 命中 0.6083 
+epoch 30 loss 1.0388 | k0_nn.npz 命中 0.5881 | k0_v31.npz 命中 0.6116 
+epoch 31 loss 1.0344 | k0_nn.npz 命中 0.5839 | k0_v31.npz 命中 0.6177 
+epoch 32 loss 1.0299 | k0_nn.npz 命中 0.5816 | k0_v31.npz 命中 0.6181 
+epoch 33 loss 1.0258 | k0_nn.npz 命中 0.5820 | k0_v31.npz 命中 0.6148 
+epoch 34 loss 1.0229 | k0_nn.npz 命中 0.5845 | k0_v31.npz 命中 0.6094 
+epoch 35 loss 1.0203 | k0_nn.npz 命中 0.5870 | k0_v31.npz 命中 0.6112 
+epoch 36 loss 1.0181 | k0_nn.npz 命中 0.5853 | k0_v31.npz 命中 0.6079 
+epoch 37 loss 1.0164 | k0_nn.npz 命中 0.5839 | k0_v31.npz 命中 0.6134 
+epoch 38 loss 1.0152 | k0_nn.npz 命中 0.5843 | k0_v31.npz 命中 0.6126 
+epoch 39 loss 1.0142 | k0_nn.npz 命中 0.5845 | k0_v31.npz 命中 0.6116 
+epoch 40 loss 1.0137 | k0_nn.npz 命中 0.5849 | k0_v31.npz 命中 0.6130 
+已保存 models/bc_k0_soft.pt  (自身分布命中 0.5881)

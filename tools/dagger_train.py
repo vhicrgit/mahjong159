@@ -41,10 +41,13 @@ def main():
     ap.add_argument("--lr", type=float, default=5e-4)
     ap.add_argument("--vcoef", type=float, default=0.1,
                     help="E 回归损失权重(主目标是 BC; 0 = 只学策略)")
+    ap.add_argument("--soft-tau", type=float, default=0.0,
+                    help=">0 时用软标签: 目标 ∝ exp(-(E_t-E_min)/tau)。"
+                         "只用 argmax 会丢掉候选之间的差距, 而每条标签都很贵")
     ap.add_argument("--out", default="models/bc_dagger.pt")
     args = ap.parse_args()
 
-    Xs, ys, Bs, tags, tr, va = [], [], [], [], [], []
+    Xs, ys, Bs, Ps, tags, tr, va = [], [], [], [], [], [], []
     off = 0
     for k, p in enumerate(args.data):
         d = np.load(p)
@@ -52,6 +55,18 @@ def main():
         y = torch.from_numpy(d["labels"]) / 20.0
         B = torch.from_numpy(d["bests"].astype(np.int64))
         n = len(y)
+        if args.soft_tau > 0 and "evec" in d.files:
+            E = torch.from_numpy(d["evec"])           # (n,28), 非法为 nan
+            legal = torch.isfinite(E)
+            Em = torch.where(legal, E, torch.full_like(E, float("inf")))
+            P = torch.softmax(
+                torch.where(legal,
+                            -(Em - Em.min(1, keepdim=True).values)
+                            / args.soft_tau,
+                            torch.full_like(E, -1e9)), dim=-1)
+        else:
+            P = torch.zeros(n, 28)
+            P[torch.arange(n), B] = 1.0               # 退化成硬标签
         g = torch.Generator().manual_seed(1234 + k)
         idx = torch.randperm(n, generator=g) + off
         nv = max(500, n // 20)
@@ -60,12 +75,15 @@ def main():
         Xs.append(X)
         ys.append(y)
         Bs.append(B)
+        Ps.append(P)
         tags.append(os.path.basename(p))
         off += n
-        print(f"{p}: {n} 条 (验证 {nv})")
+        soft = "软标签" if (args.soft_tau > 0 and "evec" in d.files) else "硬标签"
+        print(f"{p}: {n} 条 (验证 {nv}) {soft}")
     X = torch.cat(Xs)
     y = torch.cat(ys)
     B = torch.cat(Bs)
+    P = torch.cat(Ps)
 
     w = args.weights or [1.0] * len(tr)
     # 按权重重复训练索引 —— DAgger 数据量少但更贴部署分布, 通常要加权
@@ -90,9 +108,13 @@ def main():
         tot = 0.0
         for i in range(0, len(perm), args.batch):
             b = perm[i:i + args.batch]
-            xb, yb, bb = X[b].to(device), y[b].to(device), B[b].to(device)
+            xb, yb = X[b].to(device), y[b].to(device)
+            pb = P[b].to(device)
             q, v = model(xb)
-            loss = F.cross_entropy(q, bb) + args.vcoef * lossf(v, yb)
+            # 目标分布上为 0 的位置就是非法弃牌 —— 掩掉, 别让容量浪费在上面
+            q = q.masked_fill(pb <= 0, -1e9)
+            logp = F.log_softmax(q, dim=-1)
+            loss = -(pb * logp).sum(-1).mean() + args.vcoef * lossf(v, yb)
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -103,14 +125,15 @@ def main():
         accs = {}
         with torch.no_grad():
             for tag, vi in va:
-                xv, bv = X[vi].to(device), B[vi].to(device)
+                xv, bv, pv = X[vi].to(device), B[vi].to(device), P[vi].to(device)
                 qv, _ = model(xv)
+                qv = qv.masked_fill(pv <= 0, -1e9)   # 与部署时一致地掩非法
                 a = (qv.argmax(-1) == bv).float().mean().item()
                 accs[tag] = a
                 line += f"| {tag} 命中 {a:.4f} "
         print(line, flush=True)
-        own = [v for k, v in accs.items() if "dagger" in k.lower()]
-        key = min(own) if own else min(accs.values())
+        # 用最差的那个数据集当选择依据 —— 短板才是约束
+        key = min(accs.values())
         if key > best_own:
             best_own = key
             os.makedirs(os.path.dirname(args.out), exist_ok=True)
