@@ -657,7 +657,7 @@ function showResult() {
 }
 
 // ---------- 分析面板 ----------
-// 代数计数器: 局面一变就作废上一次未完成的异步 E 计算
+// 代数计数器: 局面一变或切档就自增, 用来作废上一次未完成的异步 E 计算
 let hvGen = 0;
 // 换型层深度(0/1/2): 越大越准越慢。默认关; C 内核下 1 档整表秒级
 let hvKaiMax = 0;
@@ -666,15 +666,44 @@ try {
   if (saved === 0 || saved === 1 || saved === 2) hvKaiMax = saved;
 } catch (e) { /* 隐私模式等场景没有 localStorage, 用默认 */ }
 
-// 候选行的解释展开状态(tile 级); 换型档位或局面变了缓存就作废
+/**
+ * 局面指纹。E 的输入只有两样: 我的手牌, 以及所有人的弃牌与副露(决定可见牌数)。
+ * 把这两样序列化成键, 就能跨"切换换型档位"复用结果。
+ *
+ * 注意不能用 hvGen 当缓存键 —— 它每次刷新(含切档)都自增, 那样缓存永远命中不了,
+ * 从 2 切到 1 再切回 2 就要重算三遍。
+ */
+function hvPosKey() {
+  const parts = [game.players[0].hand.slice().sort((a, b) => a - b).join(",")];
+  for (const q of game.players) {
+    parts.push(q.discards.join(",") + ";" + q.melds.map(m => m.type + m.tile).join(","));
+  }
+  return parts.join("|");
+}
+
+// 期望巡数缓存: "局面|档位|弃牌" -> E。一个局面 x 3 档 x 14 张 = 42 条,
+// 留够几十个局面。满了整体 clear 而不是"满了就不写" —— 后者会退化成永久零缓存。
+const hvECache = new Map();
+const HV_CACHE_LIMIT = 4000;
+function hvCacheSet(key, val) {
+  if (hvECache.size >= HV_CACHE_LIMIT) hvECache.clear();
+  hvECache.set(key, val);
+}
+
+// 候选行的解释展开状态(tile 级)
 const hvDetailOpen = new Set();
-const hvExplainCache = {};   // tile -> {gen, kai, data}
+// 解释缓存: "局面|档位|弃牌" -> data。与 E 同样按局面而非 hvGen 作键,
+// 这样来回切档也不用重算。
+const hvExplainCache = new Map();
 
 function hvExplainGet(tile) {
-  const c = hvExplainCache[tile];
-  if (c && c.gen === hvGen && c.kai === hvKaiMax) return c.data;
+  const key = hvPosKey() + "|" + hvKaiMax + "|" + tile;
+  if (hvExplainCache.has(key)) return hvExplainCache.get(key);
+  // 仍走主线程同步版: 这是点击展开时的一次性开销, 且随后被缓存。
+  // (E 那条路径必须搬到 worker, 因为它要连算 14 张。)
   const data = MJWasm.hvExplain(game, 0, 1.0, tile, hvKaiMax);
-  hvExplainCache[tile] = { gen: hvGen, kai: hvKaiMax, data };
+  if (hvExplainCache.size >= HV_CACHE_LIMIT) hvExplainCache.clear();
+  hvExplainCache.set(key, data);
   return data;
 }
 
@@ -734,18 +763,63 @@ function refreshAnalysis() {
   }
   const panel = document.getElementById("analysis-panel");
   const panelOpen = !panel.classList.contains("hidden");
-  hvGen++;                       // 作废旧的异步计算
+  hvGen++;                                  // 作废旧的异步计算
+  if (MJWorker.ok) MJWorker.cancelAll();    // 不再派新任务, 在途结果丢弃
   lastAnalysis = data;
-  if (panelOpen && data.discards && data.discards.length && MJWasm.ok) {
-    // 先把面板画出来(带加载态), 再分片算期望巡数 —— 否则开局局面要阻塞 ~300ms
-    data.hv_loading = true;
-    data.hv_done = 0;
-    renderAnalysis(data);
-    computeHandValueAsync(data, hvGen);
+  const canE = panelOpen && data.discards && data.discards.length
+               && (MJWorker.ok || MJWasm.ok);
+  if (canE) {
+    const miss = hvFillFromCache(data);
+    if (miss === 0) {
+      // 全部命中缓存: 直接出结果, 不进加载态。这就是"2 -> 1 -> 2"不重算的路径。
+      hvFinalize(data);
+      renderAnalysis(data);
+    } else {
+      // 先把面板画出来(带加载态), 再把缺的那几张交给后台
+      data.hv_loading = true;
+      data.hv_done = data.discards.length - miss;
+      renderAnalysis(data);
+      computeHandValueAsync(data, hvGen);
+    }
   } else if (panelOpen) {
     renderAnalysis(data);
   }
+  hvSetBusy(!!data.hv_loading);
   renderMyHand();
+}
+
+/** 把当前档位下已缓存的 E 回填到候选上; 返回还没算的张数 */
+function hvFillFromCache(data) {
+  const posKey = hvPosKey();
+  let miss = 0;
+  for (const d of data.discards) {
+    const v = hvECache.get(posKey + "|" + hvKaiMax + "|" + d.tile);
+    if (v === undefined) { delete d.hv_e; miss++; }
+    else d.hv_e = Math.round(v * 100) / 100;
+  }
+  return miss;
+}
+
+/** E 全部到位后: 选出最优作为「荐」, 并按期望巡数升序重排 */
+function hvFinalize(data) {
+  let best = null, bestE = Infinity;
+  for (const d of data.discards) {
+    if (d.hv_e !== undefined && d.hv_e < bestE) { bestE = d.hv_e; best = d.tile; }
+  }
+  data.hv_loading = false;
+  if (best === null) return;
+  data.rec_hv = best;
+  data.discards.sort((a, b) => {
+    const ea = a.hv_e === undefined ? Infinity : a.hv_e;
+    const eb = b.hv_e === undefined ? Infinity : b.hv_e;
+    return ea - eb;
+  });
+}
+
+/** 后台在算时给滑块的档位数字加脉动 */
+function hvSetBusy(on) {
+  const el = document.querySelector(".kai-slider");
+  if (el) el.classList.toggle("busy", !!on);
 }
 
 /** 让出一帧, 给浏览器机会把加载动画和已算出的部分画上去 */
@@ -757,41 +831,58 @@ function nextFrame() {
 }
 
 /**
- * 逐张算期望巡数 E, 每张之间让出一帧, 过程中界面保持可响应。
+ * 把缺的期望巡数逐张算出来。
+ *
+ * 为何必须交给 worker: mj_hv_e_after_discard 是一次不可中断的同步 wasm 调用,
+ * 真机实测单张耗时 kaiMax=0/1/2 分别为 3ms / 53ms / 322ms。放在主线程上,
+ * 就算每张之间让帧, 那 322ms 仍然是整块卡住的 —— 滑块拖不动, 面板关不掉。
+ * 搬到 worker 后主线程只负责收结果, 随时可切档。
  *
  * 两套口径并存而非取代:
- *   analyzer.js  score = -100*向听 + 3*有效进张   启发式加权, 毫秒级
+ *   analyzer.js  字典序(向听优先, 同档比进张)   启发式, 毫秒级
  *   HandAnalyzer E = 期望胡牌巡数              精确递推, 有物理含义
  * 面板关闭时用前者; 打开时用后者接管「荐」与排序。
  *
- * 仅在 wasm 就绪时做: 纯 JS 跑 E 要 2-5 秒。
  * 全部算完才重排 —— 边算边排会让行不停跳动。
  */
 async function computeHandValueAsync(data, gen) {
-  let best = null, bestE = Infinity;
+  const posKey = hvPosKey();
+  const kai = hvKaiMax;
+  const useWorker = MJWorker.ok;
+  const wgen = MJWorker.gen;
+  // 退出时只能在"自己仍是当前任务"的前提下关脉动。
+  // 快速连续切档时会有多个旧任务相继退出, 它们不能把新任务的提示关掉。
+  const bail = () => { if (gen === hvGen) hvSetBusy(false); };
   for (let i = 0; i < data.discards.length; i++) {
-    await nextFrame();
-    if (gen !== hvGen) return;             // 局面已变, 丢弃本次结果
+    if (gen !== hvGen) { bail(); return; }             // 局面或档位已变
     const d = data.discards[i];
-    const e = MJWasm.hvEAfterDiscard(game, 0, 1.0, d.tile, hvKaiMax);
+    if (d.hv_e !== undefined) continue;                // 缓存已经填过
+    const ck = posKey + "|" + kai + "|" + d.tile;
+    let e = null;
+    if (useWorker) {
+      try {
+        e = await MJWorker.eAfterDiscard(game, 0, 1.0, d.tile, kai, wgen);
+      } catch (err) {
+        bail();                                        // 被取消/超时
+        return;
+      }
+    } else {
+      // 没有 worker 只能回主线程, 至少每张之间让一帧
+      await nextFrame();
+      if (gen !== hvGen) { bail(); return; }
+      e = MJWasm.hvEAfterDiscard(game, 0, 1.0, d.tile, kai);
+    }
+    if (gen !== hvGen) { bail(); return; }
     if (e !== null && e >= 0) {
+      hvCacheSet(ck, e);
       d.hv_e = Math.round(e * 100) / 100;
-      if (e < bestE) { bestE = e; best = d.tile; }
     }
     data.hv_done = i + 1;
-    renderAnalysis(data);                  // 渐进展示, 能看到 E 逐行填上
+    renderAnalysis(data);                              // 渐进展示, 能看到 E 逐行填上
   }
-  if (gen !== hvGen) return;
-  data.hv_loading = false;
-  if (best !== null) {
-    data.rec_hv = best;
-    // 按期望巡数升序重排(越小越好); 没算出 E 的排最后
-    data.discards.sort((a, b) => {
-      const ea = a.hv_e === undefined ? Infinity : a.hv_e;
-      const eb = b.hv_e === undefined ? Infinity : b.hv_e;
-      return ea - eb;
-    });
-  }
+  if (gen !== hvGen) { bail(); return; }
+  hvFinalize(data);
+  hvSetBusy(false);
   renderAnalysis(data);
   renderMyHand();
 }
@@ -946,20 +1037,40 @@ document.getElementById("close-analysis").onclick = () => {
 };
 document.getElementById("close-review").onclick = () =>
   document.getElementById("review-panel").classList.add("hidden");
-// 换型档位: 切换后按新口径重算期望巡数
+// 换型档位滑块: 拖动时字样实时跟, 松手才重算。
+// 拖动中不算是有意的 —— 从 0 拖到 2 会路过 1, 那一档的结果没人看。
 const hvKaiSel = document.getElementById("hv-kai");
+const hvKaiVal = document.getElementById("hv-kai-val");
+const hvKaiLabel = (v) => (v === 0 ? "关" : String(v));
 if (hvKaiSel) {
   hvKaiSel.value = String(hvKaiMax);
-  hvKaiSel.onchange = () => {
-    hvKaiMax = parseInt(hvKaiSel.value) || 0;
+  if (hvKaiVal) hvKaiVal.textContent = hvKaiLabel(hvKaiMax);
+  const applyKai = () => {
+    const v = parseInt(hvKaiSel.value) || 0;
+    // 字样在 change 里也同步一次: 不能只靠 input。键盘、点轨道、代码赋值
+    // 都可能只触发 change, 那样数字会停在旧值上与实际档位不一致。
+    if (hvKaiVal) hvKaiVal.textContent = hvKaiLabel(v);
+    if (v === hvKaiMax) return;             // 没真正换档就不重算
+    hvKaiMax = v;
     try { localStorage.setItem("hv_kai_max", String(hvKaiMax)); } catch (e) {}
     refreshAnalysis();
   };
+  // input: 拖动过程中只更新字样
+  hvKaiSel.addEventListener("input", () => {
+    if (hvKaiVal) hvKaiVal.textContent = hvKaiLabel(parseInt(hvKaiSel.value) || 0);
+  });
+  // change: 松手(或点轨道)后才真算
+  hvKaiSel.addEventListener("change", applyKai);
 }
 
 // 先等 wasm 规则核心就绪再开局 —— 必须异步: 主线程上同步编译 >4KB 的 wasm 会被浏览器拒绝。
 // 初始化失败(旧 WebView / wasm 被禁)时自动降级为纯 JS, 功能不受影响。
+// MJWorker 并行初始化, 不影响开局速度: 它只管分析面板的后台 E 计算,
+// 没就绪就回退到主线程的 MJWasm。
 MJWasm.init().then((ok) => {
   if (!ok) console.warn("wasm 规则核心未启用, 降级为纯 JS(学者档会很慢)");
+  MJWorker.init().then((wok) => {
+    if (!wok) console.warn("MJWorker 未启用, 期望巡数回主线程算(高换型档会卡)");
+  });
   newGame();
 });

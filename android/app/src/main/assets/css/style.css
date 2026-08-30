@@ -275,6 +275,46 @@ html, body {
   transition: width .15s linear;
 }
 
+/* 换型档位滑块(0/1/2)。原先是 select, 在手机上点开才能选, 且看不出
+ * 这是个"档位"。滑块能直接左右拖, 也能点轨道跳档。 */
+.kai-slider {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: #a8dadc; font-weight: normal;
+  vertical-align: middle;
+}
+.kai-slider .kai-cap { flex-shrink: 0; }
+.kai-slider .kai-val {
+  min-width: 14px; text-align: center; color: #ffd166;
+  font-weight: bold; flex-shrink: 0;
+}
+/* 正在后台算 E 时给档位数字加个脉动, 提示结果还在路上 */
+.kai-slider.busy .kai-val { animation: kaiPulse 0.9s ease-in-out infinite; }
+@keyframes kaiPulse { 50% { opacity: 0.35; } }
+
+#hv-kai {
+  -webkit-appearance: none; appearance: none;
+  width: 62px; height: 20px; margin: 0; padding: 0;
+  background: transparent; vertical-align: middle;
+}
+#hv-kai::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+}
+#hv-kai::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #ffd166; border: none;
+  margin-top: -5px;   /* 让圆点在 4px 轨道上居中 */
+}
+#hv-kai:active::-webkit-slider-thumb { background: #fff3c4; }
+#hv-kai::-moz-range-track {
+  height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.22);
+}
+#hv-kai::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #ffd166; border: none;
+}
+
 #review-summary { font-size: 13px; margin-bottom: 10px; color: #ffd166; }
 .review-step {
   background: rgba(15,52,96,.4); border-radius: 8px;
@@ -323,12 +363,6 @@ html, body {
 
 /* 分析面板的换型档位选择 */
 .panel-tools { display: flex; align-items: center; gap: 10px; }
-.kai-select-label { font-size: 12px; color: #a8dadc; font-weight: normal; }
-.kai-select-label select {
-  background: #0f3460; color: #eee; border: 1px solid #1a5a8a;
-  border-radius: 4px; font-size: 12px; padding: 1px 4px; margin-left: 3px;
-}
-
 /* 分析面板候选行的解释展开 */
 .discard-suggest.clickable { cursor: pointer; flex-wrap: wrap; }
 .hv-detail {
