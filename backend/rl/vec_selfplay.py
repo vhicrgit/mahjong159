@@ -70,16 +70,18 @@ class VectorizedSelfPlay:
     def __init__(self, model, n_games: int, device, seed0: int = 0,
                  model_seats: list[int] | None = None, grp_model=None,
                  grp_version: int = 2, feat_version: int = 2,
-                 games: list | None = None, record: bool = True):
+                 games: list | None = None, record: bool = True,
+                 bloody: bool = False):
         self.model = model
         self.device = device
         self.encode = _get_encoder(feat_version)
+        self.bloody = bloody
         if games is not None:
             # 预制局面模式(GRPO世界推演): 直接使用注入好的 Game 列表
             self.games = games
             n_games = len(games)
         else:
-            self.games = [Game(seed=seed0 + i, human_seat=-1)
+            self.games = [Game(seed=seed0 + i, human_seat=-1, bloody=bloody)
                           for i in range(n_games)]
         self.n_games = n_games
         self.model_seats = model_seats or [0, 1, 2, 3]
@@ -231,5 +233,10 @@ class VectorizedSelfPlay:
                 "scores": scores,
                 "winner": g.winner,
                 "grp_vals": self.grp_vals[i],
+                "rank_rewards": g.rank_rewards(),
+                "finished": list(g.finished),
+                "ranks": list(g.ranks),
+                "gang_records": g.gang_records,
+                "huangzhuang": g.huangzhuang,
             })
         return results

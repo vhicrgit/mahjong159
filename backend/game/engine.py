@@ -4,6 +4,11 @@
 黄庄: 轮到摸牌时牌堆剩余<=6 立即黄庄
 胡牌: 仅自摸(含杠上花); 胡后从牌堆顺序翻6张, 统计1/5/9数量n, 输家各赔 n+1
 杠分(非黄庄必结): 放杠赔3分; 暗杠/补杠其他三家各赔1分
+
+bloody=True 时切换成"血战到底": 首胡不终局, 胡家下场, 剩下的人继续决出
+2/3/4 名, 每次胡牌只向【还在场的人】收分, 3 家胡完(或牌墙耗尽)才终局。
+默认 False, 与线上规则逐位一致。用途见 tools/perf/diag_bloody.py:
+首胡那一刻还有 81% 的局至少一家已听牌, 停在首胡等于把名次信息全扔掉。
 """
 
 import random
@@ -36,13 +41,18 @@ class Player:
 
 
 class Game:
-    def __init__(self, seed: int | None = None, human_seat: int = 0):
+    def __init__(self, seed: int | None = None, human_seat: int = 0,
+                 bloody: bool = False):
         self.rng = random.Random(seed)
         self.wall: list[int] = build_wall()
         self.rng.shuffle(self.wall)
         self.dealer = 0  # 庄家座位(首局随机由调用方设定, 这里默认0)
         self.players = [Player(i, is_bot=(i != human_seat)) for i in range(4)]
         self.human_seat = human_seat
+        self.bloody = bloody
+        self.finished: list[int] = []       # 已胡下场的座位, 按先后
+        self.hu_records: list[dict] = []    # 每次胡牌 {seat,tile,kind,n_159,losers}
+        self.ranks: list[int] = [0, 0, 0, 0]
         self.turn = self.dealer     # 当前行动玩家
         self.phase = "init"         # init/discard_wait/draw/game_over
         self.last_discard: int | None = None
@@ -86,12 +96,57 @@ class Game:
     def wall_remaining(self) -> int:
         return len(self.wall)
 
+    def is_active(self, seat: int) -> bool:
+        """还在场(血战到底下未胡)。非 bloody 模式恒为 True。"""
+        return seat not in self.finished
+
+    def _active_seats(self) -> list[int]:
+        return [s for s in range(4) if s not in self.finished]
+
+    def _next_active(self, seat: int) -> int | None:
+        for k in range(1, 5):
+            c = (seat + k) % 4
+            if c not in self.finished:
+                return c
+        return None
+
+    def _end_game(self) -> dict:
+        """血战到底的统一收口: 结算 + 定名次。"""
+        self._settle()
+        self._compute_ranks()
+        self.phase = "game_over"
+        return {"event": "game_over", "ranks": list(self.ranks)}
+
+    def _compute_ranks(self):
+        """已胡的按先后 0,1,2; 未胡的并列排在后面。"""
+        n = len(self.finished)
+        self.ranks = [n] * 4
+        for i, s in enumerate(self.finished):
+            self.ranks[s] = i
+
+    def rank_rewards(self, table=(3.0, 1.0, -1.0, -3.0)) -> list[float]:
+        """名次奖励(零和)。未胡者并列, 平分剩余名次的奖励。
+        非 bloody 模式退化成 胡家 +3 / 其余各 -1, 与首胡规则同构。"""
+        n = len(self.finished)
+        out = [0.0] * 4
+        for i, s in enumerate(self.finished):
+            out[s] = table[i]
+        rest = self._active_seats()
+        if rest:
+            share = sum(table[n:]) / len(rest)
+            for s in rest:
+                out[s] = share
+        return out
+
     def check_huangzhuang_before_draw(self) -> bool:
         """轮到抓牌时牌堆<=6 -> 黄庄"""
         if len(self.wall) <= 6:
             self.huangzhuang = True
-            self.phase = "game_over"
             self.log.append("牌堆剩余<=6, 黄庄")
+            if self.bloody:
+                self._end_game()
+            else:
+                self.phase = "game_over"
             return True
         return False
 
@@ -113,7 +168,7 @@ class Game:
         self.pending_actions = {}
         if tile != RED:
             for other in range(4):
-                if other == seat:
+                if other == seat or other in self.finished:
                     continue
                 op = self.players[other]
                 cnt = op.hand.count(tile)
@@ -175,7 +230,8 @@ class Game:
                self.players[self.last_discarder].discards[-1] == t:
                 self.players[self.last_discarder].discards.pop()
             self.gang_records.append({"seat": seat, "kind": "ming", "tile": t,
-                                      "from": self.last_discarder})
+                                      "from": self.last_discarder,
+                                      "active": self._active_seats()})
             self.log.append(f"座位{seat} 明杠 {tile_name(t)} (座位{self.last_discarder}放杠)")
         elif self.phase == "discard_wait" and self.turn == seat:
             assert tile is not None, "暗杠/补杠需指定牌"
@@ -188,7 +244,8 @@ class Game:
                     p.hand.remove(t)
                 p.melds.append({"type": "gang", "tile": t, "kind": "an",
                                 "wr": len(self.wall)})
-                self.gang_records.append({"seat": seat, "kind": "an", "tile": t})
+                self.gang_records.append({"seat": seat, "kind": "an", "tile": t,
+                                          "active": self._active_seats()})
                 self.log.append(f"座位{seat} 暗杠 {tile_name(t)}")
             elif p.hand.count(t) == 1 and any(
                     m["type"] == "peng" and m["tile"] == t for m in p.melds):
@@ -199,7 +256,8 @@ class Game:
                         m["type"] = "gang"
                         m["kind"] = "bu"
                         break
-                self.gang_records.append({"seat": seat, "kind": "bu", "tile": t})
+                self.gang_records.append({"seat": seat, "kind": "bu", "tile": t,
+                                          "active": self._active_seats()})
                 self.log.append(f"座位{seat} 补杠 {tile_name(t)}")
             else:
                 raise ValueError("不满足杠的条件")
@@ -219,7 +277,10 @@ class Game:
             pass
         if not self.wall:
             self.huangzhuang = True
-            self.phase = "game_over"
+            if self.bloody:
+                self._end_game()
+            else:
+                self.phase = "game_over"
             return {"event": "huangzhuang"}
         tile = self.wall.pop()  # 从尾部补牌
         self.players[seat].hand.append(tile)
@@ -235,9 +296,14 @@ class Game:
         self.turn = seat
         return {"event": "gang_draw", "seat": seat, "tile": tile}
 
-    def _next_draw(self) -> dict:
-        """下家摸牌"""
-        self.turn = (self.last_discarder + 1) % 4
+    def _next_draw(self, from_seat: int | None = None) -> dict:
+        """下家摸牌。from_seat 缺省为上一个打牌的人; 血战到底里胡牌后
+        由胡家的下一个在场者接着摸。"""
+        src = self.last_discarder if from_seat is None else from_seat
+        nxt = self._next_active(src)
+        if nxt is None:                      # 所有人都下场了
+            return self._end_game()
+        self.turn = nxt
         if self.check_huangzhuang_before_draw():
             return {"event": "huangzhuang"}
         tile = self.wall.pop(0)
@@ -271,11 +337,11 @@ class Game:
         return sorted(set(opts))
 
     def _hu(self, seat: int, tile: int, kind: str) -> dict:
-        """胡牌结算"""
-        self.winner = seat
+        """胡牌结算。bloody 模式下胡家下场, 牌局继续。"""
+        self.winner = seat if self.winner is None else self.winner
         self.win_tile = tile
         self.win_kind = kind
-        # 翻159: 从牌堆顺序抓6张
+        # 翻159: 从牌堆顺序抓6张(只看不拿)
         self.fan_159 = []
         n = 0
         if len(self.wall) >= 6:
@@ -283,17 +349,51 @@ class Game:
             n = sum(1 for t in self.fan_159 if is_159(t))
         # 若不足6张(杠上花边缘情况), 按0张算
         self.n_159 = n
-        self._settle()
-        self.phase = "game_over"
         self.log.append(f"座位{seat} 胡牌({kind}), 翻159: "
                         f"{[tile_name(t) for t in self.fan_159]}, n={n}")
-        return {"event": "hu", "seat": seat, "kind": kind,
-                "fan_159": self.fan_159, "n_159": n}
+        ev = {"event": "hu", "seat": seat, "kind": kind,
+              "fan_159": self.fan_159, "n_159": n}
+        # 两种规则都记账: 首胡模式下 finished 只会有一个人, ranks/rank_rewards
+        # 因此退化成 胡家第1 / 其余并列第2。得分仍走下面的老路径, 不受影响。
+        losers = [s for s in self._active_seats() if s != seat]
+        self.hu_records.append({"seat": seat, "tile": tile, "kind": kind,
+                                "n_159": n, "losers": losers})
+        self.finished.append(seat)
+        if not self.bloody:
+            self._settle()
+            self._compute_ranks()
+            self.phase = "game_over"
+            return ev
+        # 血战到底: 只向此刻还在场的人收分
+        self.pending_actions = {}
+        if len(self.finished) >= 3:          # 剩最后一家, 名次已定
+            self._end_game()
+            return ev
+        self._next_draw(from_seat=seat)      # 胡家下场, 下一个在场者接着摸
+        return ev
 
     def _settle(self):
         """结算: 杠分 + 胡牌159分"""
         for p in self.players:
             p.score_delta = 0
+        if self.bloody:
+            # 每笔杠分只向记录时还在场的人收; 每笔胡牌只向当时未胡的人收
+            for rec in self.gang_records:
+                s = rec["seat"]
+                if rec["kind"] == "ming":
+                    self.players[rec["from"]].score_delta -= 3
+                    self.players[s].score_delta += 3
+                else:
+                    for other in rec.get("active", [0, 1, 2, 3]):
+                        if other != s:
+                            self.players[other].score_delta -= 1
+                            self.players[s].score_delta += 1
+            for rec in self.hu_records:
+                per = rec["n_159"] + 1
+                for other in rec["losers"]:
+                    self.players[other].score_delta -= per
+                    self.players[rec["seat"]].score_delta += per
+            return
         # 杠分
         for rec in self.gang_records:
             s = rec["seat"]
@@ -338,6 +438,10 @@ class Game:
             "pending_actions": self.pending_actions,
             "winner": self.winner,
             "win_kind": self.win_kind,
+            "bloody": self.bloody,
+            "finished": list(self.finished),
+            "ranks": list(self.ranks),
+            "hu_records": self.hu_records,
             "fan_159": self.fan_159,
             "n_159": self.n_159,
             "huangzhuang": self.huangzhuang,

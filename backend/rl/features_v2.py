@@ -19,14 +19,60 @@
 import numpy as np
 
 from ..rules.win import shanten
-from ..rules.ting import discard_options, waiting_tiles, useful_draws
+from ..rules.ting import discard_options
 from .features import encode_state as _encode_v1, FEAT_DIM as _V1_DIM
 
 RED = 27
 FEAT_DIM = 628
 
 
-def encode_state(game, seat: int) -> np.ndarray:
+def _derive_py(hand_counts):
+    """纯 Python 版的向听派生量。留作 encode_state 的对拍基准。"""
+    cur = shanten(hand_counts)
+    opts = discard_options(hand_counts) if sum(hand_counts) % 3 == 2 else []
+    return cur, {o["tile"]: (o["shanten"], o["wait_count"]) for o in opts}
+
+
+def _derive_c(hand_counts):
+    """同上, 走 C 的 LUT 向听。
+
+    discard_options 对每个候选弃牌重算一遍 Python DFS 向听, profile 显示它占
+    自对弈采集的 86%(encode_state cumtime 6.9s / 总 8s)。这里换成一次
+    mj_discard_shanten 拿到全部候选, 只对听牌的候选再补一次进张统计 ——
+    wait_count 的口径必须与 Python 版逐位一致: unseen = 4 - 自己手上的张数。
+    """
+    from ..native import native
+    cur = native.shanten(list(hand_counts))
+    if sum(hand_counts) % 3 != 2:
+        return cur, {}
+    out = {}
+    h = list(hand_counts)
+    for tile, s in native.discard_shanten(h):
+        wc = 0
+        if s == 0:
+            h[tile] -= 1
+            wc = native.waits_ukeire(h, [4 - n for n in h])
+            h[tile] += 1
+        out[tile] = (s, wc)
+    return cur, out
+
+
+_DERIVE = None
+
+
+def _derive(hand_counts):
+    """首次调用探测 C 库可用性; 不可用则退回纯 Python(结果相同, 只是慢)。"""
+    global _DERIVE
+    if _DERIVE is None:
+        try:
+            _derive_c([1] * 14 + [0] * 14)
+            _DERIVE = _derive_c
+        except Exception:
+            _DERIVE = _derive_py
+    return _DERIVE(hand_counts)
+
+
+def encode_state(game, seat: int, _derive_fn=None) -> np.ndarray:
     """增强版特征编码 (628维)"""
     base = _encode_v1(game, seat)  # 512
 
@@ -43,14 +89,14 @@ def encode_state(game, seat: int) -> np.ndarray:
     for t in range(28):
         visible[t] += hand_counts[t]
 
-    # 当前向听 & 有效进张
-    cur_shanten = shanten(hand_counts) if sum(hand_counts) % 3 == 1 else shanten(hand_counts)
-    # discard_options 已经在算每个 tile 打后的 shanten/waits
-    opts = discard_options(hand_counts) if sum(hand_counts) % 3 == 2 else []
-    opts_map = {o["tile"]: o for o in opts}
+    cur_shanten, opts_map = (_derive_fn or _derive)(hand_counts)
 
-    best_shanten = min((o["shanten"] for o in opts), default=5)
-    total_useful = sum(o["wait_count"] for o in opts if o["shanten"] == best_shanten)
+    if opts_map:
+        best_shanten = min(s for s, _ in opts_map.values())
+        total_useful = sum(w for s, w in opts_map.values()
+                           if s == best_shanten)
+    else:
+        best_shanten, total_useful = 5, 0
 
     # 每张牌的派生特征
     tile_shanten = []
@@ -61,8 +107,8 @@ def encode_state(game, seat: int) -> np.ndarray:
     for t in range(28):
         o = opts_map.get(t)
         if o is not None:
-            tile_shanten.append(o["shanten"] / 5.0)
-            tile_waits.append(o["wait_count"] / 40.0)
+            tile_shanten.append(o[0] / 5.0)
+            tile_waits.append(o[1] / 40.0)
         else:
             tile_shanten.append(1.0)  # 不可打
             tile_waits.append(0.0)

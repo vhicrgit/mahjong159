@@ -1,0 +1,62 @@
+/home/zuofengrui.zfr/mahjong159/tools/rl_bloody_train.py:290: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:822.)
+  stats["klref"] += float(klref)
+热启动 models/hv_value_pretrained.pt (size=small, value 头重新初始化)
+KL 锚定参考策略 models/hv_value_pretrained.pt (权重 0.05)
+iter    1 样本 11955 步 48/4ep pi -0.0146 v 0.4687 ent 0.58 kl +0.0163 clip 0.12 klref 0.011 vR² -0.013 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter    2 样本 11745 步 48/4ep pi -0.0149 v 0.4291 ent 0.57 kl +0.0089 clip 0.07 klref 0.017 vR² +0.012 dcorr -0.000 名次奖励均+0.00 采集2.8s
+iter    3 样本 11677 步 48/4ep pi -0.0168 v 0.4183 ent 0.57 kl +0.0091 clip 0.08 klref 0.024 vR² +0.025 dcorr +0.000 名次奖励均+0.00 采集2.8s
+iter    4 样本 11839 步 48/4ep pi -0.0163 v 0.4105 ent 0.57 kl +0.0088 clip 0.07 klref 0.029 vR² +0.030 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter    5 样本 11673 步 48/4ep pi -0.0159 v 0.3864 ent 0.58 kl +0.0086 clip 0.08 klref 0.036 vR² +0.078 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter    6 样本 11935 步 48/4ep pi -0.0150 v 0.3860 ent 0.55 kl +0.0078 clip 0.08 klref 0.043 vR² +0.080 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter    7 样本 11943 步 48/4ep pi -0.0154 v 0.3973 ent 0.55 kl +0.0089 clip 0.08 klref 0.052 vR² +0.075 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter    8 样本 11954 步 48/4ep pi -0.0140 v 0.3942 ent 0.55 kl +0.0073 clip 0.08 klref 0.058 vR² +0.082 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter    9 样本 11558 步 48/4ep pi -0.0154 v 0.4016 ent 0.54 kl +0.0058 clip 0.07 klref 0.061 vR² +0.074 dcorr +0.000 名次奖励均+0.00 采集2.8s
+iter   10 样本 11878 步 48/4ep pi -0.0168 v 0.3911 ent 0.54 kl +0.0087 clip 0.08 klref 0.062 vR² +0.099 dcorr -0.000 名次奖励均+0.00 采集2.8s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.477±0.074 (t=-6.5)  得分差 -1.373±0.246  用时41s
+iter   11 样本 11696 步 48/4ep pi -0.0138 v 0.3890 ent 0.54 kl +0.0104 clip 0.08 klref 0.072 vR² +0.093 dcorr +0.000 名次奖励均+0.00 采集3.0s
+iter   12 样本 12278 步 48/4ep pi -0.0148 v 0.3766 ent 0.52 kl +0.0072 clip 0.08 klref 0.072 vR² +0.096 dcorr -0.000 名次奖励均+0.00 采集3.0s
+iter   13 样本 11829 步 48/4ep pi -0.0163 v 0.3697 ent 0.54 kl +0.0060 clip 0.07 klref 0.082 vR² +0.122 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter   14 样本 11810 步 48/4ep pi -0.0143 v 0.3767 ent 0.52 kl +0.0096 clip 0.08 klref 0.092 vR² +0.114 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   15 样本 12053 步 48/4ep pi -0.0137 v 0.3509 ent 0.52 kl +0.0076 clip 0.08 klref 0.088 vR² +0.143 dcorr +0.000 名次奖励均+0.00 采集3.0s
+iter   16 样本 11888 步 48/4ep pi -0.0154 v 0.3496 ent 0.52 kl +0.0064 clip 0.07 klref 0.098 vR² +0.159 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   17 样本 11840 步 48/4ep pi -0.0151 v 0.3705 ent 0.52 kl +0.0081 clip 0.08 klref 0.100 vR² +0.121 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   18 样本 11811 步 48/4ep pi -0.0149 v 0.3521 ent 0.52 kl +0.0072 clip 0.08 klref 0.108 vR² +0.151 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter   19 样本 11757 步 48/4ep pi -0.0135 v 0.3581 ent 0.51 kl +0.0077 clip 0.07 klref 0.117 vR² +0.167 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   20 样本 11945 步 48/4ep pi -0.0135 v 0.3564 ent 0.51 kl +0.0092 clip 0.08 klref 0.116 vR² +0.154 dcorr +0.000 名次奖励均+0.00 采集2.9s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.519±0.075 (t=-6.9)  得分差 -1.429±0.243  用时40s
+iter   21 样本 11617 步 48/4ep pi -0.0158 v 0.3622 ent 0.52 kl +0.0077 clip 0.08 klref 0.118 vR² +0.146 dcorr +0.000 名次奖励均+0.00 采集3.1s
+iter   22 样本 11896 步 48/4ep pi -0.0137 v 0.3551 ent 0.51 kl +0.0067 clip 0.07 klref 0.124 vR² +0.161 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   23 样本 11656 步 48/4ep pi -0.0141 v 0.3510 ent 0.51 kl +0.0082 clip 0.09 klref 0.123 vR² +0.179 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter   24 样本 11688 步 48/4ep pi -0.0148 v 0.3589 ent 0.53 kl +0.0082 clip 0.08 klref 0.130 vR² +0.138 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   25 样本 11676 步 48/4ep pi -0.0139 v 0.3614 ent 0.51 kl +0.0085 clip 0.08 klref 0.138 vR² +0.149 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter   26 样本 11870 步 48/4ep pi -0.0136 v 0.3445 ent 0.50 kl +0.0095 clip 0.09 klref 0.136 vR² +0.175 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   27 样本 11838 步 48/4ep pi -0.0135 v 0.3555 ent 0.51 kl +0.0090 clip 0.08 klref 0.144 vR² +0.161 dcorr +0.000 名次奖励均+0.00 采集3.0s
+iter   28 样本 11643 步 48/4ep pi -0.0140 v 0.3435 ent 0.51 kl +0.0089 clip 0.08 klref 0.144 vR² +0.145 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   29 样本 11776 步 48/4ep pi -0.0140 v 0.3587 ent 0.51 kl +0.0083 clip 0.08 klref 0.140 vR² +0.155 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   30 样本 11761 步 48/4ep pi -0.0159 v 0.3697 ent 0.52 kl +0.0061 clip 0.07 klref 0.148 vR² +0.138 dcorr -0.000 名次奖励均+0.00 采集2.9s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.527±0.076 (t=-6.9)  得分差 -1.472±0.246  用时39s
+iter   31 样本 11960 步 48/4ep pi -0.0149 v 0.3488 ent 0.52 kl +0.0074 clip 0.08 klref 0.159 vR² +0.174 dcorr +0.000 名次奖励均+0.00 采集3.2s
+iter   32 样本 11974 步 48/4ep pi -0.0136 v 0.3388 ent 0.50 kl +0.0082 clip 0.08 klref 0.162 vR² +0.173 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   33 样本 11719 步 48/4ep pi -0.0137 v 0.3395 ent 0.49 kl +0.0062 clip 0.08 klref 0.160 vR² +0.202 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   34 样本 11845 步 48/4ep pi -0.0146 v 0.3518 ent 0.51 kl +0.0065 clip 0.07 klref 0.165 vR² +0.193 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   35 样本 11843 步 48/4ep pi -0.0140 v 0.3332 ent 0.50 kl +0.0084 clip 0.08 klref 0.165 vR² +0.217 dcorr +0.000 名次奖励均+0.00 采集3.1s
+iter   36 样本 11858 步 48/4ep pi -0.0121 v 0.3456 ent 0.49 kl +0.0079 clip 0.08 klref 0.166 vR² +0.188 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   37 样本 11576 步 48/4ep pi -0.0148 v 0.3355 ent 0.50 kl +0.0080 clip 0.09 klref 0.165 vR² +0.206 dcorr +0.000 名次奖励均+0.00 采集2.8s
+iter   38 样本 11893 步 48/4ep pi -0.0144 v 0.3351 ent 0.49 kl +0.0078 clip 0.08 klref 0.183 vR² +0.220 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   39 样本 11843 步 48/4ep pi -0.0151 v 0.3376 ent 0.49 kl +0.0076 clip 0.09 klref 0.191 vR² +0.203 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   40 样本 11906 步 48/4ep pi -0.0149 v 0.3358 ent 0.48 kl +0.0077 clip 0.08 klref 0.181 vR² +0.218 dcorr -0.000 名次奖励均+0.00 采集2.9s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.359±0.073 (t=-4.9)  得分差 -1.049±0.236  用时39s
+iter   41 样本 11645 步 48/4ep pi -0.0147 v 0.3391 ent 0.49 kl +0.0094 clip 0.09 klref 0.189 vR² +0.197 dcorr +0.000 名次奖励均+0.00 采集3.1s
+iter   42 样本 11831 步 48/4ep pi -0.0138 v 0.3471 ent 0.50 kl +0.0081 clip 0.09 klref 0.184 vR² +0.196 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   43 样本 11584 步 48/4ep pi -0.0160 v 0.3471 ent 0.49 kl +0.0085 clip 0.08 klref 0.181 vR² +0.197 dcorr -0.000 名次奖励均+0.00 采集2.8s
+iter   44 样本 11675 步 48/4ep pi -0.0131 v 0.3636 ent 0.48 kl +0.0104 clip 0.09 klref 0.172 vR² +0.178 dcorr -0.000 名次奖励均+0.00 采集2.9s
+iter   45 样本 11919 步 48/4ep pi -0.0130 v 0.3308 ent 0.48 kl +0.0093 clip 0.08 klref 0.180 vR² +0.200 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   46 样本 11800 步 48/4ep pi -0.0147 v 0.3400 ent 0.47 kl +0.0079 clip 0.08 klref 0.177 vR² +0.222 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   47 样本 11965 步 48/4ep pi -0.0133 v 0.3506 ent 0.47 kl +0.0095 clip 0.09 klref 0.178 vR² +0.181 dcorr +0.000 名次奖励均+0.00 采集3.0s
+iter   48 样本 11739 步 48/4ep pi -0.0140 v 0.3473 ent 0.46 kl +0.0075 clip 0.08 klref 0.180 vR² +0.190 dcorr +0.000 名次奖励均+0.00 采集2.9s
+iter   49 样本 11690 步 48/4ep pi -0.0166 v 0.3373 ent 0.47 kl +0.0087 clip 0.08 klref 0.183 vR² +0.198 dcorr +0.000 名次奖励均+0.00 采集2.8s
+iter   50 样本 11879 步 48/4ep pi -0.0128 v 0.3586 ent 0.46 kl +0.0103 clip 0.08 klref 0.183 vR² +0.163 dcorr +0.000 名次奖励均+0.00 采集3.0s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.394±0.073 (t=-5.4)  得分差 -1.222±0.234  用时39s
+iter   51 样本 11927 步 48/4ep pi -0.0139 v 0.3436 ent 0.47 kl +0.0096 clip 0.08 klref 0.185 vR² +0.186 dcorr +0.000 名次奖励均+0.00 采集3.3s
+iter   52 样本 11671 步 48/4ep pi -0.0156 v 0.3477 ent 0.46 kl +0.0066 clip 0.08 klref 0.180 vR² +0.201 dcorr -0.000 名次奖励均+0.00 采集2.9s

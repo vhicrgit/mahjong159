@@ -1,0 +1,94 @@
+/home/zuofengrui.zfr/mahjong159/tools/rl_cf_train.py:135: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:822.)
+  st["pi"] += float(loss)
+热启动 models/hv_value_pretrained_v2.pt (size=small); 反事实 advantage 不用 critic
+iter    1 反事实样本  1619 步  7/2ep pi -0.0083 ent 0.31 kl +0.0281 clip 0.10 klref 0.020 adv标准差 1.699 采集12.0s
+iter    2 反事实样本  1629 步 15/4ep pi -0.0122 ent 0.31 kl +0.0203 clip 0.13 klref 0.049 adv标准差 1.729 采集12.1s
+iter    3 反事实样本  1690 步 11/3ep pi -0.0134 ent 0.30 kl +0.0210 clip 0.07 klref 0.062 adv标准差 1.934 采集12.9s
+iter    4 反事实样本  1659 步 14/4ep pi -0.0246 ent 0.30 kl +0.0234 clip 0.10 klref 0.078 adv标准差 1.943 采集12.3s
+iter    5 反事实样本  1562 步 16/4ep pi +0.0060 ent 0.29 kl +0.0246 clip 0.10 klref 0.093 adv标准差 1.885 采集12.1s
+iter    6 反事实样本  1583 步 14/4ep pi -0.0213 ent 0.31 kl +0.0215 clip 0.10 klref 0.132 adv标准差 1.795 采集12.1s
+iter    7 反事实样本  1632 步 16/4ep pi -0.0179 ent 0.29 kl +0.0207 clip 0.11 klref 0.155 adv标准差 1.817 采集12.5s
+iter    8 反事实样本  1499 步 12/4ep pi -0.0174 ent 0.30 kl +0.0215 clip 0.09 klref 0.138 adv标准差 1.807 采集11.5s
+iter    9 反事实样本  1624 步 15/4ep pi -0.0159 ent 0.28 kl +0.0205 clip 0.10 klref 0.133 adv标准差 1.842 采集12.2s
+iter   10 反事实样本  1663 步 12/3ep pi -0.0094 ent 0.30 kl +0.0216 clip 0.09 klref 0.160 adv标准差 1.763 采集12.6s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.403±0.080 (t=-5.0)  得分差 -1.155±0.255  用时42s
+iter   11 反事实样本  1626 步 13/4ep pi -0.0136 ent 0.31 kl +0.0208 clip 0.11 klref 0.209 adv标准差 1.813 采集12.4s
+iter   12 反事实样本  1509 步 12/4ep pi -0.0135 ent 0.29 kl +0.0164 clip 0.09 klref 0.208 adv标准差 1.824 采集11.8s
+iter   13 反事实样本  1610 步 16/4ep pi -0.0266 ent 0.30 kl +0.0227 clip 0.12 klref 0.218 adv标准差 1.809 采集12.5s
+iter   14 反事实样本  1634 步 15/4ep pi -0.0160 ent 0.30 kl +0.0225 clip 0.11 klref 0.231 adv标准差 1.839 采集12.4s
+iter   15 反事实样本  1597 步 14/4ep pi -0.0074 ent 0.29 kl +0.0201 clip 0.11 klref 0.254 adv标准差 1.906 采集12.2s
+iter   16 反事实样本  1553 步 16/4ep pi -0.0279 ent 0.30 kl +0.0147 clip 0.11 klref 0.266 adv标准差 1.797 采集12.3s
+iter   17 反事实样本  1638 步 16/4ep pi -0.0315 ent 0.29 kl +0.0200 clip 0.10 klref 0.244 adv标准差 1.824 采集12.6s
+iter   18 反事实样本  1564 步 12/3ep pi +0.0126 ent 0.30 kl +0.0275 clip 0.10 klref 0.233 adv标准差 1.893 采集12.3s
+iter   19 反事实样本  1625 步 13/4ep pi -0.0150 ent 0.30 kl +0.0212 clip 0.10 klref 0.214 adv标准差 1.920 采集12.7s
+iter   20 反事实样本  1615 步 14/4ep pi -0.0182 ent 0.30 kl +0.0212 clip 0.09 klref 0.224 adv标准差 1.837 采集12.3s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.393±0.077 (t=-5.1)  得分差 -1.154±0.249  用时41s
+iter   21 反事实样本  1539 步  8/2ep pi -0.0315 ent 0.39 kl +0.0249 clip 0.07 klref 0.275 adv标准差 1.913 采集12.3s
+iter   22 反事实样本  1717 步 14/4ep pi -0.0199 ent 0.31 kl +0.0224 clip 0.10 klref 0.265 adv标准差 1.866 采集13.2s
+iter   23 反事实样本  1588 步 16/4ep pi -0.0428 ent 0.27 kl +0.0200 clip 0.10 klref 0.263 adv标准差 1.868 采集12.0s
+iter   24 反事实样本  1592 步 15/4ep pi -0.0232 ent 0.28 kl +0.0212 clip 0.11 klref 0.282 adv标准差 1.897 采集12.3s
+iter   25 反事实样本  1651 步 10/3ep pi +0.0013 ent 0.30 kl +0.0205 clip 0.08 klref 0.266 adv标准差 1.901 采集12.8s
+iter   26 反事实样本  1568 步 15/4ep pi -0.0025 ent 0.28 kl +0.0213 clip 0.10 klref 0.258 adv标准差 1.771 采集12.3s
+iter   27 反事实样本  1538 步 14/4ep pi +0.0581 ent 0.27 kl +0.0223 clip 0.09 klref 0.367 adv标准差 1.922 采集12.2s
+iter   28 反事实样本  1592 步 14/4ep pi -0.0035 ent 0.29 kl +0.0200 clip 0.10 klref 0.273 adv标准差 1.862 采集12.4s
+iter   29 反事实样本  1648 步 16/4ep pi -0.0147 ent 0.29 kl +0.0193 clip 0.11 klref 0.299 adv标准差 1.861 采集12.7s
+iter   30 反事实样本  1515 步 12/4ep pi -0.0154 ent 0.30 kl +0.0181 clip 0.10 klref 0.291 adv标准差 1.835 采集12.0s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.351±0.080 (t=-4.4)  得分差 -1.015±0.261  用时43s
+iter   31 反事实样本  1657 步 16/4ep pi -0.0184 ent 0.30 kl +0.0161 clip 0.10 klref 0.361 adv标准差 1.804 采集12.8s
+iter   32 反事实样本  1611 步 16/4ep pi -0.0283 ent 0.30 kl +0.0138 clip 0.10 klref 0.359 adv标准差 1.823 采集12.3s
+iter   33 反事实样本  1671 步 12/3ep pi -0.0122 ent 0.29 kl +0.0239 clip 0.10 klref 0.346 adv标准差 1.847 采集12.9s
+iter   34 反事实样本  1645 步 16/4ep pi -0.0135 ent 0.28 kl +0.0137 clip 0.09 klref 0.356 adv标准差 1.851 采集12.7s
+iter   35 反事实样本  1530 步 12/4ep pi -0.0135 ent 0.30 kl +0.0110 clip 0.08 klref 0.390 adv标准差 1.902 采集12.1s
+iter   36 反事实样本  1591 步 15/4ep pi +0.0027 ent 0.28 kl +0.0223 clip 0.12 klref 0.338 adv标准差 1.873 采集12.4s
+iter   37 反事实样本  1536 步 12/4ep pi -0.0159 ent 0.31 kl +0.0207 clip 0.09 klref 0.352 adv标准差 1.839 采集12.2s
+iter   38 反事实样本  1628 步 14/4ep pi -0.0091 ent 0.30 kl +0.0231 clip 0.10 klref 0.365 adv标准差 1.757 采集12.6s
+iter   39 反事实样本  1619 步 12/3ep pi +0.0030 ent 0.30 kl +0.0233 clip 0.08 klref 0.377 adv标准差 1.840 采集12.3s
+iter   40 反事实样本  1695 步 14/4ep pi -0.0093 ent 0.30 kl +0.0226 clip 0.11 klref 0.387 adv标准差 1.922 采集13.2s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.356±0.080 (t=-4.5)  得分差 -1.103±0.254  用时42s
+iter   41 反事实样本  1612 步 14/4ep pi -0.0164 ent 0.29 kl +0.0214 clip 0.10 klref 0.353 adv标准差 1.871 采集12.6s
+iter   42 反事实样本  1586 步 12/3ep pi -0.0142 ent 0.29 kl +0.0229 clip 0.09 klref 0.408 adv标准差 1.824 采集12.6s
+iter   43 反事实样本  1643 步 15/4ep pi +0.0100 ent 0.30 kl +0.0222 clip 0.11 klref 0.379 adv标准差 1.877 采集12.8s
+iter   44 反事实样本  1611 步 15/4ep pi -0.0200 ent 0.27 kl +0.0227 clip 0.09 klref 0.376 adv标准差 1.818 采集12.1s
+iter   45 反事实样本  1672 步 10/3ep pi -0.0046 ent 0.30 kl +0.0230 clip 0.08 klref 0.377 adv标准差 1.870 采集12.9s
+iter   46 反事实样本  1587 步 13/4ep pi -0.0056 ent 0.32 kl +0.0203 clip 0.09 klref 0.418 adv标准差 1.811 采集12.4s
+iter   47 反事实样本  1565 步 16/4ep pi +0.0213 ent 0.29 kl +0.0214 clip 0.09 klref 0.389 adv标准差 1.735 采集12.2s
+iter   48 反事实样本  1580 步 13/4ep pi -0.0026 ent 0.29 kl +0.0225 clip 0.10 klref 0.430 adv标准差 1.861 采集12.0s
+iter   49 反事实样本  1612 步 13/4ep pi +0.0064 ent 0.30 kl +0.0208 clip 0.09 klref 0.438 adv标准差 1.860 采集12.4s
+iter   50 反事实样本  1615 步 14/4ep pi -0.0400 ent 0.31 kl +0.0203 clip 0.09 klref 0.447 adv标准差 1.840 采集12.3s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.438±0.082 (t=-5.3)  得分差 -1.347±0.260  用时41s
+iter   51 反事实样本  1574 步 10/3ep pi +0.0152 ent 0.30 kl +0.0238 clip 0.09 klref 0.405 adv标准差 1.908 采集12.5s
+iter   52 反事实样本  1568 步 12/3ep pi +0.0176 ent 0.28 kl +0.0212 clip 0.09 klref 0.422 adv标准差 1.851 采集12.3s
+iter   53 反事实样本  1596 步 16/4ep pi -0.0602 ent 0.28 kl +0.0132 clip 0.11 klref 0.435 adv标准差 1.866 采集12.5s
+iter   54 反事实样本  1601 步 14/4ep pi -0.0162 ent 0.29 kl +0.0218 clip 0.10 klref 0.424 adv标准差 1.909 采集12.5s
+iter   55 反事实样本  1534 步 12/4ep pi -0.0125 ent 0.27 kl +0.0141 clip 0.10 klref 0.435 adv标准差 1.894 采集11.9s
+iter   56 反事实样本  1578 步 14/4ep pi +0.0254 ent 0.29 kl +0.0227 clip 0.10 klref 0.409 adv标准差 1.739 采集12.0s
+iter   57 反事实样本  1539 步 15/4ep pi +0.0090 ent 0.26 kl +0.0205 clip 0.09 klref 0.380 adv标准差 1.806 采集11.7s
+iter   58 反事实样本  1627 步 16/4ep pi -0.0090 ent 0.29 kl +0.0160 clip 0.10 klref 0.408 adv标准差 1.918 采集12.4s
+iter   59 反事实样本  1581 步 10/3ep pi -0.0050 ent 0.31 kl +0.0234 clip 0.09 klref 0.460 adv标准差 1.824 采集12.0s
+iter   60 反事实样本  1580 步 13/4ep pi -0.0153 ent 0.28 kl +0.0212 clip 0.10 klref 0.439 adv标准差 1.905 采集12.3s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.427±0.079 (t=-5.4)  得分差 -1.272±0.253  用时41s
+iter   61 反事实样本  1544 步 15/4ep pi -0.0173 ent 0.26 kl +0.0229 clip 0.09 klref 0.344 adv标准差 1.783 采集11.9s
+iter   62 反事实样本  1615 步 16/4ep pi -0.0027 ent 0.30 kl +0.0192 clip 0.11 klref 0.392 adv标准差 1.829 采集12.5s
+iter   63 反事实样本  1644 步 10/3ep pi -0.0005 ent 0.29 kl +0.0201 clip 0.09 klref 0.418 adv标准差 1.776 采集12.5s
+iter   64 反事实样本  1641 步 15/4ep pi -0.0136 ent 0.30 kl +0.0231 clip 0.12 klref 0.444 adv标准差 1.882 采集12.6s
+iter   65 反事实样本  1618 步 12/3ep pi +0.0016 ent 0.28 kl +0.0208 clip 0.09 klref 0.399 adv标准差 1.825 采集12.6s
+iter   66 反事实样本  1531 步 12/4ep pi -0.0120 ent 0.28 kl +0.0130 clip 0.10 klref 0.395 adv标准差 1.902 采集11.7s
+iter   67 反事实样本  1580 步 16/4ep pi -0.0116 ent 0.30 kl +0.0255 clip 0.12 klref 0.406 adv标准差 1.812 采集12.1s
+iter   68 反事实样本  1647 步 14/4ep pi -0.0143 ent 0.28 kl +0.0226 clip 0.10 klref 0.400 adv标准差 1.931 采集12.6s
+iter   69 反事实样本  1608 步 13/4ep pi -0.0089 ent 0.29 kl +0.0203 clip 0.09 klref 0.415 adv标准差 1.848 采集12.3s
+iter   70 反事实样本  1608 步 15/4ep pi -0.0034 ent 0.27 kl +0.0213 clip 0.09 klref 0.460 adv标准差 1.903 采集12.3s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.466±0.077 (t=-6.0)  得分差 -1.401±0.241  用时41s
+iter   71 反事实样本  1558 步 14/4ep pi -0.0254 ent 0.30 kl +0.0232 clip 0.09 klref 0.470 adv标准差 1.868 采集12.3s
+iter   72 反事实样本  1624 步 14/4ep pi -0.0086 ent 0.26 kl +0.0230 clip 0.10 klref 0.403 adv标准差 1.832 采集12.3s
+iter   73 反事实样本  1573 步 12/3ep pi -0.0045 ent 0.30 kl +0.0205 clip 0.09 klref 0.452 adv标准差 1.857 采集12.1s
+iter   74 反事实样本  1540 步 16/4ep pi -0.0616 ent 0.25 kl +0.0032 clip 0.11 klref 0.354 adv标准差 1.857 采集12.0s
+iter   75 反事实样本  1630 步 12/3ep pi +0.0057 ent 0.29 kl +0.0236 clip 0.09 klref 0.426 adv标准差 1.830 采集12.5s
+iter   76 反事实样本  1571 步 16/4ep pi -0.0313 ent 0.28 kl +0.0206 clip 0.11 klref 0.502 adv标准差 1.915 采集12.0s
+iter   77 反事实样本  1675 步 11/3ep pi -0.0049 ent 0.29 kl +0.0230 clip 0.08 klref 0.497 adv标准差 1.832 采集12.8s
+iter   78 反事实样本  1586 步 16/4ep pi -0.0462 ent 0.28 kl +0.0177 clip 0.11 klref 0.484 adv标准差 1.786 采集12.1s
+iter   79 反事实样本  1571 步 12/3ep pi -0.0044 ent 0.28 kl +0.0207 clip 0.09 klref 0.494 adv标准差 1.812 采集12.0s
+iter   80 反事实样本  1564 步 12/3ep pi +0.0058 ent 0.28 kl +0.0231 clip 0.09 klref 0.547 adv标准差 1.831 采集11.9s
+   [评估 200seed×4座位 vs v31n] 名次差 -0.506±0.078 (t=-6.5)  得分差 -1.441±0.251  用时41s
+iter   81 反事实样本  1572 步 13/4ep pi +0.0260 ent 0.29 kl +0.0207 clip 0.08 klref 0.532 adv标准差 1.888 采集12.7s
+iter   82 反事实样本  1553 步 12/3ep pi -0.0287 ent 0.27 kl +0.0266 clip 0.09 klref 0.453 adv标准差 1.849 采集11.9s
