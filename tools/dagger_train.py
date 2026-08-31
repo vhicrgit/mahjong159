@@ -55,7 +55,10 @@ def main():
         y = torch.from_numpy(d["labels"]) / 20.0
         B = torch.from_numpy(d["bests"].astype(np.int64))
         n = len(y)
-        if args.soft_tau > 0 and "evec" in d.files:
+        if "target" in d.files:
+            P = torch.from_numpy(d["target"]).float()   # 搜索教师给的分布
+            kind = "教师标签"
+        elif args.soft_tau > 0 and "evec" in d.files:
             E = torch.from_numpy(d["evec"])           # (n,28), 非法为 nan
             legal = torch.isfinite(E)
             Em = torch.where(legal, E, torch.full_like(E, float("inf")))
@@ -64,9 +67,11 @@ def main():
                             -(Em - Em.min(1, keepdim=True).values)
                             / args.soft_tau,
                             torch.full_like(E, -1e9)), dim=-1)
+            kind = "软标签"
         else:
             P = torch.zeros(n, 28)
             P[torch.arange(n), B] = 1.0               # 退化成硬标签
+            kind = "硬标签"
         g = torch.Generator().manual_seed(1234 + k)
         idx = torch.randperm(n, generator=g) + off
         nv = max(500, n // 20)
@@ -78,8 +83,7 @@ def main():
         Ps.append(P)
         tags.append(os.path.basename(p))
         off += n
-        soft = "软标签" if (args.soft_tau > 0 and "evec" in d.files) else "硬标签"
-        print(f"{p}: {n} 条 (验证 {nv}) {soft}")
+        print(f"{p}: {n} 条 (验证 {nv}) {kind}")
     X = torch.cat(Xs)
     y = torch.cat(ys)
     B = torch.cat(Bs)
