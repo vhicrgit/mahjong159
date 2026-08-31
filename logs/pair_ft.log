@@ -1,0 +1,29 @@
+起点/冻结版 = models/bc_k0_r2.pt (size=small)
+iter    1 样本 4274 步 36/4ep pi -0.0390 ent 1.04 kl +0.0092 clip 0.15 klref 0.009 adv标准差 2.621 四座位比分差 +0.266±0.412 采集31.5s
+iter    2 样本 4310 步 36/4ep pi -0.0284 ent 1.04 kl +0.0098 clip 0.11 klref 0.017 adv标准差 2.677 四座位比分差 +0.818±0.345 采集32.5s
+iter    3 样本 4333 步 36/4ep pi -0.0283 ent 0.96 kl +0.0085 clip 0.10 klref 0.021 adv标准差 2.720 四座位比分差 +0.198±0.405 采集26.8s
+iter    4 样本 4269 步 36/4ep pi -0.0279 ent 0.97 kl +0.0079 clip 0.10 klref 0.027 adv标准差 2.563 四座位比分差 +0.547±0.409 采集25.7s
+iter    5 样本 4521 步 36/4ep pi -0.0261 ent 0.96 kl +0.0073 clip 0.09 klref 0.032 adv标准差 2.811 四座位比分差 -0.586±0.430 采集30.1s
+iter    6 样本 4123 步 36/4ep pi -0.0282 ent 0.97 kl +0.0084 clip 0.11 klref 0.039 adv标准差 2.650 四座位比分差 +0.029±0.401 采集30.4s
+iter    7 样本 4261 步 36/4ep pi -0.0269 ent 0.96 kl +0.0113 clip 0.10 klref 0.047 adv标准差 2.688 四座位比分差 +0.615±0.381 采集30.2s
+iter    8 样本 4249 步 36/4ep pi -0.0230 ent 0.93 kl +0.0091 clip 0.10 klref 0.054 adv标准差 2.564 四座位比分差 +0.768±0.377 采集33.7s
+iter    9 样本 4210 步 36/4ep pi -0.0311 ent 0.94 kl +0.0062 clip 0.11 klref 0.061 adv标准差 2.522 四座位比分差 +0.443±0.376 采集34.0s
+iter   10 样本 4187 步 36/4ep pi -0.0262 ent 0.94 kl +0.0105 clip 0.11 klref 0.065 adv标准差 2.522 四座位比分差 +0.784±0.429 采集38.2s
+iter   11 样本 4403 步 36/4ep pi -0.0246 ent 0.93 kl +0.0076 clip 0.11 klref 0.076 adv标准差 2.539 四座位比分差 -0.086±0.398 采集31.7s
+iter   12 样本 4143 步 36/4ep pi -0.0136 ent 0.91 kl +0.0101 clip 0.10 klref 0.077 adv标准差 2.599 四座位比分差 +0.570±0.393 采集39.1s
+iter   13 样本 4283 步 36/4ep pi -0.0201 ent 0.89 kl +0.0085 clip 0.11 klref 0.089 adv标准差 2.650 四座位比分差 +0.393±0.414 采集39.1s
+iter   14 样本 4235 步 36/4ep pi -0.0232 ent 0.90 kl +0.0100 clip 0.11 klref 0.094 adv标准差 2.672 四座位比分差 +0.328±0.400 采集34.1s
+Traceback (most recent call last):
+  File "/opt/conda/envs/python3.10/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/opt/conda/envs/python3.10/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/zuofengrui.zfr/mahjong159/tools/rl_paired_train.py", line 297, in <module>
+    main()
+  File "/home/zuofengrui.zfr/mahjong159/tools/rl_paired_train.py", line 281, in main
+    torch.save({"size": size, "model": m_cpu.state_dict(),
+  File "/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/torch/serialization.py", line 1002, in save
+    with _open_zipfile_writer(f) as opened_zipfile:
+  File "/home/zuofengrui.zfr/mahjong159/.venv-jax/lib/python3.10/site-packages/torch/serialization.py", line 834, in __exit__
+    self.file_like.write_end_of_file()
+RuntimeError: basic_ios::clear: iostream error
