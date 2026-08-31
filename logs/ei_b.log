@@ -1,0 +1,21 @@
+models/teach_3.npz: 8886 条 (验证 500) 教师标签
+models/teach_4.npz: 8931 条 (验证 500) 教师标签
+models/teach_5.npz: 8857 条 (验证 500) 教师标签
+models/teach_6.npz: 8827 条 (验证 500) 教师标签
+models/k0_nn.npz: 103934 条 (验证 5196) 软标签
+models/k0_nn_r2.npz: 56180 条 (验证 2809) 软标签
+训练样本(加权后) 252612   权重 [3.0, 3.0, 3.0, 3.0, 1.0, 1.0]
+热启动 models/bc_k0_r2.pt
+epoch  1 loss 1.1962 | teach_3.npz 命中 0.5360 | teach_4.npz 命中 0.4640 | teach_5.npz 命中 0.4800 | teach_6.npz 命中 0.5060 | k0_nn.npz 命中 0.7011 | k0_nn_r2.npz 命中 0.7035 
+epoch  2 loss 1.1668 | teach_3.npz 命中 0.5060 | teach_4.npz 命中 0.4740 | teach_5.npz 命中 0.4700 | teach_6.npz 命中 0.5020 | k0_nn.npz 命中 0.6955 | k0_nn_r2.npz 命中 0.6903 
+epoch  3 loss 1.1512 | teach_3.npz 命中 0.5040 | teach_4.npz 命中 0.4840 | teach_5.npz 命中 0.4640 | teach_6.npz 命中 0.4900 | k0_nn.npz 命中 0.6849 | k0_nn_r2.npz 命中 0.6878 
+epoch  4 loss 1.1380 | teach_3.npz 命中 0.4940 | teach_4.npz 命中 0.4720 | teach_5.npz 命中 0.4460 | teach_6.npz 命中 0.4940 | k0_nn.npz 命中 0.6849 | k0_nn_r2.npz 命中 0.6946 
+epoch  5 loss 1.1278 | teach_3.npz 命中 0.5080 | teach_4.npz 命中 0.4760 | teach_5.npz 命中 0.4520 | teach_6.npz 命中 0.4840 | k0_nn.npz 命中 0.6855 | k0_nn_r2.npz 命中 0.6874 
+epoch  6 loss 1.1186 | teach_3.npz 命中 0.4980 | teach_4.npz 命中 0.4760 | teach_5.npz 命中 0.4700 | teach_6.npz 命中 0.5000 | k0_nn.npz 命中 0.6771 | k0_nn_r2.npz 命中 0.6853 
+epoch  7 loss 1.1110 | teach_3.npz 命中 0.5160 | teach_4.npz 命中 0.4780 | teach_5.npz 命中 0.4600 | teach_6.npz 命中 0.4960 | k0_nn.npz 命中 0.6813 | k0_nn_r2.npz 命中 0.6743 
+epoch  8 loss 1.1047 | teach_3.npz 命中 0.5000 | teach_4.npz 命中 0.4660 | teach_5.npz 命中 0.4520 | teach_6.npz 命中 0.5000 | k0_nn.npz 命中 0.6836 | k0_nn_r2.npz 命中 0.6792 
+epoch  9 loss 1.0997 | teach_3.npz 命中 0.4940 | teach_4.npz 命中 0.4700 | teach_5.npz 命中 0.4560 | teach_6.npz 命中 0.5060 | k0_nn.npz 命中 0.6784 | k0_nn_r2.npz 命中 0.6828 
+epoch 10 loss 1.0961 | teach_3.npz 命中 0.5020 | teach_4.npz 命中 0.4800 | teach_5.npz 命中 0.4580 | teach_6.npz 命中 0.5060 | k0_nn.npz 命中 0.6817 | k0_nn_r2.npz 命中 0.6849 
+epoch 11 loss 1.0936 | teach_3.npz 命中 0.4980 | teach_4.npz 命中 0.4780 | teach_5.npz 命中 0.4620 | teach_6.npz 命中 0.5120 | k0_nn.npz 命中 0.6813 | k0_nn_r2.npz 命中 0.6782 
+epoch 12 loss 1.0923 | teach_3.npz 命中 0.4960 | teach_4.npz 命中 0.4800 | teach_5.npz 命中 0.4620 | teach_6.npz 命中 0.5040 | k0_nn.npz 命中 0.6823 | k0_nn_r2.npz 命中 0.6824 
+已保存 models/ei_b.pt  (自身分布命中 0.4700)
