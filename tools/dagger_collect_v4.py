@@ -52,7 +52,8 @@ def feed(trs, kind, **kw):
                             kw["discarder"])
 
 
-def rollout(model, n_games, seed0, keep, bloody, rng, n_init, beam):
+def rollout(model, n_games, seed0, keep, bloody, rng, n_init, beam,
+            feat_dim=628):
     games = [Game(seed=seed0 + i, human_seat=-1, bloody=bloody)
              for i in range(n_games)]
     trs = [make_trackers(g, n_init, beam, seed0 + i)
@@ -93,7 +94,13 @@ def rollout(model, n_games, seed0, keep, bloody, rng, n_init, beam):
             break
         gs = [games[i] for i in idx]
         ss = [games[i].turn for i in idx]
-        feats = np.stack([encode_v2(g, s) for g, s in zip(gs, ss)])
+        if feat_dim == 718:
+            # v4 模型: 决策特征带 tracker 段(与存储特征同口径)
+            feats = np.stack([
+                np.concatenate([encode_v2(g, s), opp_features(trs[i], s)])
+                for i, g, s in zip(idx, gs, ss)])
+        else:
+            feats = np.stack([encode_v2(g, s) for g, s in zip(gs, ss)])
         masks = torch.stack([legal_discard_mask(g.players[s].hand_counts)
                              for g, s in zip(gs, ss)])
         with torch.no_grad():
@@ -103,7 +110,9 @@ def rollout(model, n_games, seed0, keep, bloody, rng, n_init, beam):
         for k, i in enumerate(idx):
             g, s = games[i], ss[k]
             if rng.random() < keep:
-                v4 = np.concatenate([feats[k], opp_features(trs[i], s)])
+                # feat_dim=718 时 feats[k] 已是 v4(决策与存储同口径), 别重拼
+                v4 = feats[k] if feats.shape[1] == 718 else \
+                    np.concatenate([feats[k], opp_features(trs[i], s)])
                 out.append((v4, list(g.players[s].hand_counts),
                             visible_of(g, s)))
             t = int(acts[k])
@@ -136,14 +145,15 @@ def main():
     args = ap.parse_args()
 
     ck = torch.load(args.model, map_location="cpu", weights_only=True)
-    model = build_model(ck["size"])
+    model = build_model(ck["size"], feat_dim=ck.get("feat_dim", 628))
     model.load_state_dict(ck["model"], strict=False)
     model.eval()
 
     rng = np.random.default_rng(3)
     t0 = time.time()
     st = rollout(model, args.games, args.seed0, args.keep, args.bloody,
-                 rng, args.n_init, args.beam)
+                 rng, args.n_init, args.beam,
+                 feat_dim=ck.get("feat_dim", 628))
     print(f"自对弈 {args.games} 局 -> {len(st)} 个 v4 状态  "
           f"{time.time() - t0:.0f}s", flush=True)
 

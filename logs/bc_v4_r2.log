@@ -1,0 +1,37 @@
+models/v4_nn_0.npz: 25008 条 (验证 1250) 软标签
+models/v4_nn_1.npz: 24940 条 (验证 1247) 软标签
+models/v4_nn_2.npz: 24749 条 (验证 1237) 软标签
+models/v4_nn_3.npz: 24907 条 (验证 1245) 软标签
+models/v4_nn_4.npz: 24874 条 (验证 1243) 软标签
+models/v4_nn_5.npz: 24872 条 (验证 1243) 软标签
+models/v4_fw_0.npz: 20634 条 (验证 1031) 软标签
+models/v4_fw_1.npz: 20121 条 (验证 1006) 软标签
+训练样本(加权后) 219321   权重 [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0]
+特征维度 718 (非默认 628)
+热启动 models/bc_v4_r1.pt
+epoch  1 loss 1.2433 | v4_nn_0.npz 命中 0.6168 | v4_nn_1.npz 命中 0.6047 | v4_nn_2.npz 命中 0.6257 | v4_nn_3.npz 命中 0.6265 | v4_nn_4.npz 命中 0.6428 | v4_nn_5.npz 命中 0.6227 | v4_fw_0.npz 命中 0.5674 | v4_fw_1.npz 命中 0.5537 
+epoch  2 loss 1.2075 | v4_nn_0.npz 命中 0.6128 | v4_nn_1.npz 命中 0.6047 | v4_nn_2.npz 命中 0.6289 | v4_nn_3.npz 命中 0.6402 | v4_nn_4.npz 命中 0.6541 | v4_nn_5.npz 命中 0.6163 | v4_fw_0.npz 命中 0.5616 | v4_fw_1.npz 命中 0.5606 
+epoch  3 loss 1.1852 | v4_nn_0.npz 命中 0.6160 | v4_nn_1.npz 命中 0.6030 | v4_nn_2.npz 命中 0.6289 | v4_nn_3.npz 命中 0.6273 | v4_nn_4.npz 命中 0.6380 | v4_nn_5.npz 命中 0.6090 | v4_fw_0.npz 命中 0.5606 | v4_fw_1.npz 命中 0.5596 
+epoch  4 loss 1.1662 | v4_nn_0.npz 命中 0.6176 | v4_nn_1.npz 命中 0.5934 | v4_nn_2.npz 命中 0.6168 | v4_nn_3.npz 命中 0.6426 | v4_nn_4.npz 命中 0.6364 | v4_nn_5.npz 命中 0.6267 | v4_fw_0.npz 命中 0.5752 | v4_fw_1.npz 命中 0.5736 
+epoch  5 loss 1.1512 | v4_nn_0.npz 命中 0.6168 | v4_nn_1.npz 命中 0.6103 | v4_nn_2.npz 命中 0.6136 | v4_nn_3.npz 命中 0.6369 | v4_nn_4.npz 命中 0.6476 | v4_nn_5.npz 命中 0.6211 | v4_fw_0.npz 命中 0.5674 | v4_fw_1.npz 命中 0.5815 
+epoch  6 loss 1.1375 | v4_nn_0.npz 命中 0.6216 | v4_nn_1.npz 命中 0.5982 | v4_nn_2.npz 命中 0.6257 | v4_nn_3.npz 命中 0.6442 | v4_nn_4.npz 命中 0.6541 | v4_nn_5.npz 命中 0.6243 | v4_fw_0.npz 命中 0.5713 | v4_fw_1.npz 命中 0.5865 
+epoch  7 loss 1.1250 | v4_nn_0.npz 命中 0.6224 | v4_nn_1.npz 命中 0.6047 | v4_nn_2.npz 命中 0.6281 | v4_nn_3.npz 命中 0.6353 | v4_nn_4.npz 命中 0.6508 | v4_nn_5.npz 命中 0.6146 | v4_fw_0.npz 命中 0.5674 | v4_fw_1.npz 命中 0.5775 
+epoch  8 loss 1.1139 | v4_nn_0.npz 命中 0.6192 | v4_nn_1.npz 命中 0.6127 | v4_nn_2.npz 命中 0.6200 | v4_nn_3.npz 命中 0.6386 | v4_nn_4.npz 命中 0.6476 | v4_nn_5.npz 命中 0.6171 | v4_fw_0.npz 命中 0.5703 | v4_fw_1.npz 命中 0.5944 
+epoch  9 loss 1.1039 | v4_nn_0.npz 命中 0.6336 | v4_nn_1.npz 命中 0.6199 | v4_nn_2.npz 命中 0.6160 | v4_nn_3.npz 命中 0.6466 | v4_nn_4.npz 命中 0.6629 | v4_nn_5.npz 命中 0.6195 | v4_fw_0.npz 命中 0.5839 | v4_fw_1.npz 命中 0.5934 
+epoch 10 loss 1.0947 | v4_nn_0.npz 命中 0.6224 | v4_nn_1.npz 命中 0.6199 | v4_nn_2.npz 命中 0.6354 | v4_nn_3.npz 命中 0.6434 | v4_nn_4.npz 命中 0.6533 | v4_nn_5.npz 命中 0.6259 | v4_fw_0.npz 命中 0.5781 | v4_fw_1.npz 命中 0.5905 
+epoch 11 loss 1.0858 | v4_nn_0.npz 命中 0.6256 | v4_nn_1.npz 命中 0.6143 | v4_nn_2.npz 命中 0.6281 | v4_nn_3.npz 命中 0.6353 | v4_nn_4.npz 命中 0.6436 | v4_nn_5.npz 命中 0.6235 | v4_fw_0.npz 命中 0.5684 | v4_fw_1.npz 命中 0.5915 
+epoch 12 loss 1.0777 | v4_nn_0.npz 命中 0.6304 | v4_nn_1.npz 命中 0.6207 | v4_nn_2.npz 命中 0.6314 | v4_nn_3.npz 命中 0.6402 | v4_nn_4.npz 命中 0.6508 | v4_nn_5.npz 命中 0.6331 | v4_fw_0.npz 命中 0.5810 | v4_fw_1.npz 命中 0.6103 
+epoch 13 loss 1.0710 | v4_nn_0.npz 命中 0.6208 | v4_nn_1.npz 命中 0.6151 | v4_nn_2.npz 命中 0.6217 | v4_nn_3.npz 命中 0.6353 | v4_nn_4.npz 命中 0.6500 | v4_nn_5.npz 命中 0.6235 | v4_fw_0.npz 命中 0.5761 | v4_fw_1.npz 命中 0.5845 
+epoch 14 loss 1.0644 | v4_nn_0.npz 命中 0.6320 | v4_nn_1.npz 命中 0.6191 | v4_nn_2.npz 命中 0.6297 | v4_nn_3.npz 命中 0.6410 | v4_nn_4.npz 命中 0.6549 | v4_nn_5.npz 命中 0.6203 | v4_fw_0.npz 命中 0.5732 | v4_fw_1.npz 命中 0.5885 
+epoch 15 loss 1.0583 | v4_nn_0.npz 命中 0.6184 | v4_nn_1.npz 命中 0.6191 | v4_nn_2.npz 命中 0.6249 | v4_nn_3.npz 命中 0.6345 | v4_nn_4.npz 命中 0.6557 | v4_nn_5.npz 命中 0.6227 | v4_fw_0.npz 命中 0.5703 | v4_fw_1.npz 命中 0.6044 
+epoch 16 loss 1.0534 | v4_nn_0.npz 命中 0.6224 | v4_nn_1.npz 命中 0.6207 | v4_nn_2.npz 命中 0.6241 | v4_nn_3.npz 命中 0.6305 | v4_nn_4.npz 命中 0.6557 | v4_nn_5.npz 命中 0.6106 | v4_fw_0.npz 命中 0.5752 | v4_fw_1.npz 命中 0.5974 
+epoch 17 loss 1.0482 | v4_nn_0.npz 命中 0.6272 | v4_nn_1.npz 命中 0.6151 | v4_nn_2.npz 命中 0.6297 | v4_nn_3.npz 命中 0.6313 | v4_nn_4.npz 命中 0.6613 | v4_nn_5.npz 命中 0.6227 | v4_fw_0.npz 命中 0.5868 | v4_fw_1.npz 命中 0.5994 
+epoch 18 loss 1.0445 | v4_nn_0.npz 命中 0.6296 | v4_nn_1.npz 命中 0.6199 | v4_nn_2.npz 命中 0.6273 | v4_nn_3.npz 命中 0.6305 | v4_nn_4.npz 命中 0.6573 | v4_nn_5.npz 命中 0.6267 | v4_fw_0.npz 命中 0.5897 | v4_fw_1.npz 命中 0.6024 
+epoch 19 loss 1.0410 | v4_nn_0.npz 命中 0.6280 | v4_nn_1.npz 命中 0.6199 | v4_nn_2.npz 命中 0.6225 | v4_nn_3.npz 命中 0.6313 | v4_nn_4.npz 命中 0.6565 | v4_nn_5.npz 命中 0.6267 | v4_fw_0.npz 命中 0.5742 | v4_fw_1.npz 命中 0.6024 
+epoch 20 loss 1.0382 | v4_nn_0.npz 命中 0.6264 | v4_nn_1.npz 命中 0.6231 | v4_nn_2.npz 命中 0.6241 | v4_nn_3.npz 命中 0.6329 | v4_nn_4.npz 命中 0.6516 | v4_nn_5.npz 命中 0.6187 | v4_fw_0.npz 命中 0.5829 | v4_fw_1.npz 命中 0.6044 
+epoch 21 loss 1.0357 | v4_nn_0.npz 命中 0.6248 | v4_nn_1.npz 命中 0.6191 | v4_nn_2.npz 命中 0.6225 | v4_nn_3.npz 命中 0.6281 | v4_nn_4.npz 命中 0.6508 | v4_nn_5.npz 命中 0.6179 | v4_fw_0.npz 命中 0.5820 | v4_fw_1.npz 命中 0.5974 
+epoch 22 loss 1.0338 | v4_nn_0.npz 命中 0.6256 | v4_nn_1.npz 命中 0.6215 | v4_nn_2.npz 命中 0.6233 | v4_nn_3.npz 命中 0.6289 | v4_nn_4.npz 命中 0.6468 | v4_nn_5.npz 命中 0.6211 | v4_fw_0.npz 命中 0.5897 | v4_fw_1.npz 命中 0.5954 
+epoch 23 loss 1.0324 | v4_nn_0.npz 命中 0.6272 | v4_nn_1.npz 命中 0.6143 | v4_nn_2.npz 命中 0.6233 | v4_nn_3.npz 命中 0.6321 | v4_nn_4.npz 命中 0.6525 | v4_nn_5.npz 命中 0.6195 | v4_fw_0.npz 命中 0.5878 | v4_fw_1.npz 命中 0.5944 
+epoch 24 loss 1.0315 | v4_nn_0.npz 命中 0.6232 | v4_nn_1.npz 命中 0.6175 | v4_nn_2.npz 命中 0.6281 | v4_nn_3.npz 命中 0.6321 | v4_nn_4.npz 命中 0.6508 | v4_nn_5.npz 命中 0.6203 | v4_fw_0.npz 命中 0.5878 | v4_fw_1.npz 命中 0.5964 
+epoch 25 loss 1.0309 | v4_nn_0.npz 命中 0.6264 | v4_nn_1.npz 命中 0.6199 | v4_nn_2.npz 命中 0.6273 | v4_nn_3.npz 命中 0.6313 | v4_nn_4.npz 命中 0.6516 | v4_nn_5.npz 命中 0.6211 | v4_fw_0.npz 命中 0.5887 | v4_fw_1.npz 命中 0.5974 
+已保存 models/bc_v4_r2.pt  (自身分布命中 0.5897)

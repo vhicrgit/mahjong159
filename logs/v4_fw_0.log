@@ -1,0 +1,4 @@
+自对弈 1500 局 -> 20634 个 v4 状态  1473s
+raw 已落盘 models/v4_fw_0_raw.npz
+标签 kai=0 × 1 进程  967s
+已存 models/v4_fw_0.npz  20634 条  feats 718 维
