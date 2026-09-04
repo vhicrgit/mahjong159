@@ -96,7 +96,10 @@ def main():
     print(f"训练样本(加权后) {len(tr_idx)}   权重 {w}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = build_model(args.size).to(device)
+    feat_dim = X.shape[1]          # v2=628 / v4=718, 从数据推断
+    if feat_dim != 628:
+        print(f"特征维度 {feat_dim} (非默认 628)")
+    model = build_model(args.size, feat_dim=feat_dim).to(device)
     if args.init and os.path.exists(args.init):
         ck = torch.load(args.init, map_location="cpu", weights_only=True)
         model.load_state_dict(ck["model"], strict=False)
@@ -141,7 +144,8 @@ def main():
         if key > best_own:
             best_own = key
             os.makedirs(os.path.dirname(args.out), exist_ok=True)
-            torch.save({"size": args.size, "model":
+            torch.save({"size": args.size, "feat_dim": feat_dim,
+                        "model":
                         {k: v.cpu() for k, v in model.state_dict().items()},
                         "acc": accs}, args.out)
     print(f"已保存 {args.out}  (自身分布命中 {best_own:.4f})")

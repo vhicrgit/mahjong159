@@ -1,0 +1,22 @@
+models/teach64_conf.npz: 1561 条 (验证 500) 教师标签
+models/k0_nn.npz: 103934 条 (验证 5196) 软标签
+models/k0_nn_r2.npz: 56180 条 (验证 2809) 软标签
+models/k0_nn_fw.npz: 42416 条 (验证 2120) 软标签
+训练样本(加权后) 196649   权重 [4.0, 1.0, 1.0, 1.0]
+热启动 models/bc_r2_s3.pt
+epoch  1 loss 1.1169 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.7057 | k0_nn_r2.npz 命中 0.7180 | k0_nn_fw.npz 命中 0.6401 
+epoch  2 loss 1.0658 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.7028 | k0_nn_r2.npz 命中 0.7138 | k0_nn_fw.npz 命中 0.6448 
+epoch  3 loss 1.0562 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6994 | k0_nn_r2.npz 命中 0.7077 | k0_nn_fw.npz 命中 0.6476 
+epoch  4 loss 1.0484 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6961 | k0_nn_r2.npz 命中 0.7198 | k0_nn_fw.npz 命中 0.6354 
+epoch  5 loss 1.0419 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.7071 | k0_nn_r2.npz 命中 0.7156 | k0_nn_fw.npz 命中 0.6458 
+epoch  6 loss 1.0359 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.7021 | k0_nn_r2.npz 命中 0.7138 | k0_nn_fw.npz 命中 0.6434 
+epoch  7 loss 1.0306 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6982 | k0_nn_r2.npz 命中 0.7091 | k0_nn_fw.npz 命中 0.6349 
+epoch  8 loss 1.0265 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6982 | k0_nn_r2.npz 命中 0.7106 | k0_nn_fw.npz 命中 0.6344 
+epoch  9 loss 1.0222 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.7005 | k0_nn_r2.npz 命中 0.7152 | k0_nn_fw.npz 命中 0.6439 
+epoch 10 loss 1.0186 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6996 | k0_nn_r2.npz 命中 0.7106 | k0_nn_fw.npz 命中 0.6396 
+epoch 11 loss 1.0156 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.7000 | k0_nn_r2.npz 命中 0.7127 | k0_nn_fw.npz 命中 0.6448 
+epoch 12 loss 1.0131 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6977 | k0_nn_r2.npz 命中 0.7084 | k0_nn_fw.npz 命中 0.6401 
+epoch 13 loss 1.0112 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6994 | k0_nn_r2.npz 命中 0.7099 | k0_nn_fw.npz 命中 0.6415 
+epoch 14 loss 1.0099 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.7009 | k0_nn_r2.npz 命中 0.7095 | k0_nn_fw.npz 命中 0.6396 
+epoch 15 loss 1.0092 | teach64_conf.npz 命中 1.0000 | k0_nn.npz 命中 0.6998 | k0_nn_r2.npz 命中 0.7134 | k0_nn_fw.npz 命中 0.6396 
+已保存 models/ei64_a.pt  (自身分布命中 0.6476)

@@ -51,11 +51,13 @@ def _counts_str(counts) -> str:
 class OppTracker:
     def __init__(self, opp_seat: int, hero_hand_counts, n_init: int = 4000,
                  beam: int = 800, policy: bool = True,
-                 seed: int = 0):
+                 seed: int = 0, hero_seat: int = 0):
         """opp_seat: 被跟踪的对手座位。hero_hand_counts: 观察者(我方)起手。
         n_init: 初始抽样发牌数; beam: 每事件后保留的最大粒子数。
-        policy: False 时退化为纯计数基线(不做行为似然, 用于对照)。"""
+        policy: False 时退化为纯计数基线(不做行为似然, 用于对照)。
+        hero_seat: 观察者座位(默认0; 四座位全跟踪时需要各自实例化)。"""
         self.opp = opp_seat
+        self.hero_seat = hero_seat
         self.policy = policy
         self.beam = beam
         self.n_init = n_init
@@ -201,7 +203,7 @@ class OppTracker:
         self.wall_rem = wall_rem
         if seat == self.opp:
             self.pending_draw = True
-        elif seat == 0:
+        elif seat == self.hero_seat:
             self.hero[tile] += 1
 
     def notify_discard(self, seat: int, tile: int, wall_rem: int):
@@ -209,7 +211,7 @@ class OppTracker:
         if seat == self.opp:
             # 学者先决策后打出: 似然用打出前的公开信息
             self._filter_opp_discard(tile)
-        if seat == 0:
+        if seat == self.hero_seat:
             self.hero[tile] -= 1
         self.discards[seat].append(tile)
 
@@ -257,7 +259,7 @@ class OppTracker:
                 self.discards[discarder].pop()
             kind = "ming" if action == "gang" else None
             self.melds[seat].append((action, tile, kind))
-            if seat == 0:
+            if seat == self.hero_seat:
                 self.hero[tile] -= 2 if action == "peng" else 3
 
     def _filter_opp_claim(self, action: str | None, tile: int):
