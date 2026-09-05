@@ -1,0 +1,76 @@
+################ eps=0.01
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/home/zuofengrui.zfr/old/mahjong159/tools/perf/diag_action_crn.py:190: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at /workspace/code/xla/2.5/pytorch/aten/src/ATen/native/ReduceOps.cpp:1823.)
+  p.add_(eps * float(p.std()) * torch.randn(p.shape, generator=g))
+learner=models/bc_r2_s3.pt + 噪声 eps=0.01
+frozen =models/bc_r2_s3.pt
+策略距离: KL(L||F)=0.0032  熵 L/F=0.465/0.462  argmax 一致率=97.3%
+200 seed × 2 臂, 座位 0, temp=1.0, 血战
+
+  greedy  adv 均 -0.0050  sd 2.0039  两臂动作分歧 4.82 次/局  -> 检出 0.05 分/局 需 1606 seed
+  indep   adv 均 -0.0750  sd 2.1088  两臂动作分歧 5.71 次/局  -> 检出 0.05 分/局 需 1779 seed
+  crn     adv 均 +0.0200  sd 1.0141  两臂动作分歧 1.55 次/局  -> 检出 0.05 分/局 需 411 seed
+
+相对 greedy 口径:
+  indep   sd 压缩 0.95x  (方差压缩 0.9x)
+  crn     sd 压缩 1.98x  (方差压缩 3.9x)
+
+已写 logs/diag_action_crn_eps0.01.json
+################ eps=0.03
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/home/zuofengrui.zfr/old/mahjong159/tools/perf/diag_action_crn.py:190: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at /workspace/code/xla/2.5/pytorch/aten/src/ATen/native/ReduceOps.cpp:1823.)
+  p.add_(eps * float(p.std()) * torch.randn(p.shape, generator=g))
+learner=models/bc_r2_s3.pt + 噪声 eps=0.03
+frozen =models/bc_r2_s3.pt
+策略距离: KL(L||F)=0.0279  熵 L/F=0.468/0.462  argmax 一致率=91.5%
+200 seed × 2 臂, 座位 0, temp=1.0, 血战
+
+  greedy  adv 均 +0.1537  sd 1.9532  两臂动作分歧 5.39 次/局  -> 检出 0.05 分/局 需 1526 seed
+  indep   adv 均 -0.2562  sd 2.1685  两臂动作分歧 5.71 次/局  -> 检出 0.05 分/局 需 1881 seed
+  crn     adv 均 +0.0550  sd 1.5507  两臂动作分歧 3.09 次/局  -> 检出 0.05 分/局 需 962 seed
+
+相对 greedy 口径:
+  indep   sd 压缩 0.90x  (方差压缩 0.8x)
+  crn     sd 压缩 1.26x  (方差压缩 1.6x)
+
+已写 logs/diag_action_crn_eps0.03.json
+################ eps=0.1
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/home/zuofengrui.zfr/old/mahjong159/tools/perf/diag_action_crn.py:190: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at /workspace/code/xla/2.5/pytorch/aten/src/ATen/native/ReduceOps.cpp:1823.)
+  p.add_(eps * float(p.std()) * torch.randn(p.shape, generator=g))
+learner=models/bc_r2_s3.pt + 噪声 eps=0.1
+frozen =models/bc_r2_s3.pt
+策略距离: KL(L||F)=0.2901  熵 L/F=0.456/0.462  argmax 一致率=78.5%
+200 seed × 2 臂, 座位 0, temp=1.0, 血战
+
+  greedy  adv 均 -0.2988  sd 2.4429  两臂动作分歧 5.99 次/局  -> 检出 0.05 分/局 需 2387 seed
+  indep   adv 均 -0.1000  sd 2.2187  两臂动作分歧 6.66 次/局  -> 检出 0.05 分/局 需 1969 seed
+  crn     adv 均 -0.0225  sd 2.1926  两臂动作分歧 5.55 次/局  -> 检出 0.05 分/局 需 1923 seed
+
+相对 greedy 口径:
+  indep   sd 压缩 1.10x  (方差压缩 1.2x)
+  crn     sd 压缩 1.11x  (方差压缩 1.2x)
+
+已写 logs/diag_action_crn_eps0.1.json
+################ eps=0.3
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/home/zuofengrui.zfr/old/mahjong159/tools/perf/diag_action_crn.py:190: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at /workspace/code/xla/2.5/pytorch/aten/src/ATen/native/ReduceOps.cpp:1823.)
+  p.add_(eps * float(p.std()) * torch.randn(p.shape, generator=g))
+learner=models/bc_r2_s3.pt + 噪声 eps=0.3
+frozen =models/bc_r2_s3.pt
+策略距离: KL(L||F)=1.8729  熵 L/F=0.354/0.462  argmax 一致率=53.0%
+200 seed × 2 臂, 座位 0, temp=1.0, 血战
+
+  greedy  adv 均 -0.3425  sd 2.4476  两臂动作分歧 7.52 次/局  -> 检出 0.05 分/局 需 2396 seed
+  indep   adv 均 -0.3925  sd 2.4488  两臂动作分歧 7.58 次/局  -> 检出 0.05 分/局 需 2399 seed
+  crn     adv 均 -0.2462  sd 2.6284  两臂动作分歧 7.24 次/局  -> 检出 0.05 分/局 需 2763 seed
+
+相对 greedy 口径:
+  indep   sd 压缩 1.00x  (方差压缩 1.0x)
+  crn     sd 压缩 0.93x  (方差压缩 0.9x)
+
+已写 logs/diag_action_crn_eps0.3.json
