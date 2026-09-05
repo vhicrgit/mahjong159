@@ -1,0 +1,14 @@
+== 1. C 原生四副露进张 ==
+  构造例: Python 打 0, C 打 0
+  随机 400 手: 进张不一致 97.8%, 选牌不一致 21.5%
+== 2. features 路径是否受牵连 ==
+  {'samples': 200, 'mismatches': {'shanten': 0, 'discard_shanten': 0, 'waits_ukeire': 0}, 'verdict': 'OK'}
+== 3. bot_v1 座位依赖 ==
+  座位0 vs 座位3 分歧 21.5%
+== 4. public_state 信息边界 ==
+  leak=True last_drawn={'seat': 2, 'tile': 13} gang_options=[]
+== 5. bot_v29 近似式偏差(归档) ==
+== 6. 四副露决策点频率(300 局) ==
+  弃牌决策 6839, 四副露 0 (0.000%), C 与 Python 分歧 0 (0.0%)
+  按副露数分布: {0: 5040, 1: 1566, 2: 217, 3: 16}
+已写 logs/audit_codex_20260905.json

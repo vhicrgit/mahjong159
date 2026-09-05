@@ -1,0 +1,31 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+模型 models/acnn_latest_best.pt (size=small, feat_dim=628)
+自对弈 60 局 -> 决策点 1694 个 (1.8s)
+  16/256 状态, 8s (114s 剩余)
+  32/256 状态, 16s (109s 剩余)
+  48/256 状态, 23s (101s 剩余)
+  64/256 状态, 30s (91s 剩余)
+  80/256 状态, 37s (82s 剩余)
+  96/256 状态, 45s (74s 剩余)
+  112/256 状态, 52s (67s 剩余)
+  128/256 状态, 58s (58s 剩余)
+  144/256 状态, 64s (50s 剩余)
+  160/256 状态, 70s (42s 剩余)
+  176/256 状态, 76s (35s 剩余)
+  192/256 状态, 81s (27s 剩余)
+  208/256 状态, 87s (20s 剩余)
+  224/256 状态, 92s (13s 剩余)
+  240/256 状态, 97s (6s 剩余)
+  256/256 状态, 101s (0s 剩余)
+
+=== 方差分解(每个弃牌决策点的终局回报) ===
+  可见局面之间   0.7696  (20.4%)   <- 盲打 critic 可学
+  隐藏世界之间   3.0003  (79.6%)   <- 特权 critic 额外可学
+  策略采样之内   0.0000  (0.0%)   <- 不可约(降温可减)
+  合计           3.7699
+
+盲打 critic: 拟合 R²=0.4842 / 天花板 0.2041
+特权 critic 天花板 R²=1.0000
+若达到天花板, advantage 噪声可降到 1/1941617.17
+已写 logs/diag_conditional_variance_temp0.json

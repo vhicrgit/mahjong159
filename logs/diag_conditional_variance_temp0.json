@@ -1,0 +1,41 @@
+{
+ "model": "models/acnn_latest_best.pt",
+ "args": {
+  "model": "models/acnn_latest_best.pt",
+  "states": 256,
+  "worlds": 32,
+  "rolls": 1,
+  "games": 60,
+  "seed0": 206200000,
+  "seed": 20260905,
+  "rollout_temp": 0.0,
+  "procs": 1,
+  "out": "logs/diag_conditional_variance_temp0.json"
+ },
+ "states": 256,
+ "worlds": 32,
+ "rolls": 1,
+ "rollout_temp": 0.0,
+ "seconds": 101.02193093299866,
+ "reward": "rank_rewards + 0.25*自己杠分 (cf_collect.default_reward)",
+ "variance_components": {
+  "var_visible_state": 0.7695892782772289,
+  "var_hidden_world": 3.0002879481161795,
+  "var_policy_sampling": 0.0,
+  "total": 3.769877226393408,
+  "share_visible": 0.20414173514437892,
+  "share_world": 0.7958582648556212,
+  "share_policy": 0.0
+ },
+ "critic_r2": {
+  "blind_fitted": 0.48418666984423864,
+  "blind_ceiling": 0.20414173514437892,
+  "privileged_ceiling": 1.0
+ },
+ "advantage_noise_reduction_if_privileged": 1941617.1678251633,
+ "per_state_mean_return": {
+  "mean": 0.5911865234375,
+  "sd": 0.877262377101189
+ },
+ "world_mean_sd_within_state": 1.7321339290355637
+}

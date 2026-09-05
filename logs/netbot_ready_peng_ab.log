@@ -1,0 +1,9 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+A: models/acnn_latest_best.pt (部署口径 NetBot)
+B: models/acnn_latest_best.pt (size=small, iter=None, 碰杠=hv)
+1500 seed × 4 座位, 对手 v31n, CRN 配对, 真实净分差口径
+
+[首胡(线上规则)]  A - B
+  名次奖励差 +0.0000 ± 0.0000  t=+0.00  (n=1500, 观测 6000)
+  真实净分差 +0.0000 ± 0.0000  t=+0.00   95%CI [+0.0000, +0.0000]

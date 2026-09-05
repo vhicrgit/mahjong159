@@ -19,6 +19,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 _SO = os.path.join(_HERE, "libmjcore.so")
 _SRC = os.path.join(_ROOT, "mobile", "wasm", "mjcore.c")
+# mjcore.c #include 的 E 引擎本体: 不比它会让引擎改动后 .so 静默不重建
+_HV_INC = os.path.join(_ROOT, "mobile", "wasm", "hv_engine_inc.c")
 
 _STATE = {"lib": None, "kind": None, "tried": False}
 
@@ -37,8 +39,8 @@ def _compile_mjcore():
 
 
 def _load_mjcore():
-    if (not os.path.exists(_SO)
-            or os.path.getmtime(_SO) < os.path.getmtime(_SRC)):
+    built = os.path.getmtime(_SO) if os.path.exists(_SO) else 0.0
+    if any(built < os.path.getmtime(p) for p in (_SRC, _HV_INC)):
         _compile_mjcore()
     L = ctypes.CDLL(_SO)
     i8p = ctypes.POINTER(ctypes.c_int8)

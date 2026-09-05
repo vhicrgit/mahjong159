@@ -1,5 +1,25 @@
 """安康159 - GRPO 式组内比较训练 (想法2实现)
 
+⚠ 已退役, 保留作历史证据。两处缺陷经独立复现确认(2026-09-05):
+
+1. 目标函数无下界: 候选是枚举出来的(不是从 π 采的), 既无行为策略比率也无
+   clipping; 组内中心化后 Σ_a A(a)=0, log-softmax 的归一化项相消,
+   `-mean[A·logπ]` 退化成 `-mean[A·logit]` —— 把负优势动作的 logit 压向 -∞
+   就能让 loss 无限下降, 而前向 KL 到固定满支撑参考分布有有限上界, 拦不住。
+   探针(两动作, A=[+1,-1], 均匀参考, β=0.1, 本机复现): logit 差 10 → loss
+   -9.9307; 差 100 → -99.9307; 差 1000 → -999.9307。KL 恒饱和在 log2=0.693147,
+   dloss/dlogit 始终 -1 —— loss 随 logit 差线性下降且无下界。所以"loss 在降"
+   不能作为策略改进的证据, min_sd / adv_clip / 小 lr 只是放慢, 不改变机制。
+2. 快照只覆盖前盘: `_collect_worker` 用 `rng.sample(range(2,14), k)` 配"每家
+   弃牌都 +1"的全局计数器, 采到的是整局第 2~13 次弃牌 ≈ 每家前 1~4 巡,
+   大量世界推演反复服务于极少且偏早期的状态。
+
+现役替代: `tools/search_teacher.py`(牌数相容的多隐藏世界 + 逐世界配对回报 +
+交叉验证) → `tools/filter_teacher.py` → `tools/dagger_train.py`(真实合法动作
+掩码上的归一化非负目标做交叉熵); 在线 RL 用 `tools/rl_paired_train.py`
+(配对冻结基线) 与 `tools/rl_bloody_train.py`。评估一律走 `backend/rl/eval_crn.py`
+(四座位轮转 + seed 聚类 SE + 完整暗杠/补杠协议)。
+
 流程(每轮迭代):
 1. 状态采样: v10 自对弈, 随机座位/巡目快照 Game + 特征
 2. 当前策略 NN 对每局面出 top-m 候选弃牌(并入 v10 选择保底)

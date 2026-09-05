@@ -414,8 +414,28 @@ class Game:
                     self.players[self.winner].score_delta += per_loser
 
     # ---------- 状态导出 ----------
+    def _viewer_log(self, for_seat: int) -> list[str]:
+        """日志按视角脱敏: 别家摸牌/杠后补牌的具体牌面不外发。"""
+        out = []
+        for line in self.log[-30:]:
+            for seat in range(4):
+                if seat == for_seat:
+                    continue
+                for event in ("摸牌", "杠后补牌"):
+                    prefix = f"座位{seat} {event} "
+                    if line.startswith(prefix):
+                        line = prefix.rstrip()
+                        break
+            out.append(line)
+        return out
+
     def public_state(self, for_seat: int) -> dict:
-        """从某座位视角的公开状态(隐藏其他家手牌)"""
+        """从某座位视角的公开状态。
+
+        隐藏的不只是别家手牌: 别家摸到的牌、别家的碰/杠响应权、别家的杠选项
+        都是私有信息, 随 /api/state 发出去等于给前端留了作弊入口(devtools 直接
+        读到牌墙顺序级别的提示)。
+        """
         ps = []
         for p in self.players:
             ps.append({
@@ -427,6 +447,9 @@ class Game:
                 "score_delta": p.score_delta,
                 "is_dealer": p.seat == self.dealer,
             })
+        drawn = self.last_drawn
+        if drawn and drawn.get("seat") != for_seat:
+            drawn = {"seat": drawn["seat"]}   # 只保留"谁摸了牌", 不透露摸了什么
         return {
             "players": ps,
             "dealer": self.dealer,
@@ -435,7 +458,8 @@ class Game:
             "wall_remaining": len(self.wall),
             "last_discard": self.last_discard,
             "last_discarder": self.last_discarder,
-            "pending_actions": self.pending_actions,
+            "pending_actions": ({for_seat: self.pending_actions[for_seat]}
+                                if for_seat in self.pending_actions else {}),
             "winner": self.winner,
             "win_kind": self.win_kind,
             "bloody": self.bloody,
@@ -446,9 +470,10 @@ class Game:
             "n_159": self.n_159,
             "huangzhuang": self.huangzhuang,
             "gang_records": self.gang_records,
-            "last_drawn": self.last_drawn,
+            "last_drawn": drawn,
             "last_action": self.last_action,
             "gang_options": (self._gang_options(self.turn)
-                             if self.phase == "discard_wait" else []),
-            "log": self.log[-30:],
+                             if self.phase == "discard_wait"
+                             and self.turn == for_seat else []),
+            "log": self._viewer_log(for_seat),
         }

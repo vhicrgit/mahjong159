@@ -90,6 +90,9 @@ class NNHVClaim(NNSeat):
 def make_factory(spec, claim="v31"):
     if spec == "v31n":
         return NativeV31, "v31n"
+    if spec == "v32":
+        from backend.ai.bot_v32 import Bot as V32Bot
+        return V32Bot, "v32 (v31n + 听牌后选择性碰牌)"
     if spec == "v10n":
         return NativeV10, "v10n"
     if spec == "v1n":
@@ -103,8 +106,13 @@ def make_factory(spec, claim="v31"):
         return ((lambda g, s: HVSeat(g, s, kai, v31c)),
                 f"牌型分析器 kai={kai}"
                 + (" + v31 碰杠" if v31c else " (自己的 E 碰杠)"))
+    if claim == "deploy" and spec.endswith(".pt"):
+        # 部署口径: 直接用 NetBot(NN 贪心弃牌 + E 碰杠 + v32 选择性碰牌),
+        # 不用评估侧的 NNHVClaim 包装, 免得包装与线上类漂移
+        from backend.rl.net_bot import NetBot
+        return (lambda g, s: NetBot(g, s, spec)), f"{spec} (部署口径 NetBot)"
     ck = torch.load(spec, map_location="cpu", weights_only=True)
-    m = build_model(ck["size"])
+    m = build_model(ck["size"], feat_dim=ck.get("feat_dim", 628))
     m.load_state_dict(ck["model"])
     m.eval()
     tag = f"{spec} (size={ck['size']}, iter={ck.get('iter')}, 碰杠={claim})"
@@ -118,19 +126,30 @@ def main():
     ap.add_argument("ckpt")
     ap.add_argument("--seeds", type=int, default=400)
     ap.add_argument("--seed0", type=int, default=41000000)
-    ap.add_argument("--claim", choices=["v31", "hv"], default="v31",
-                    help="模型的碰/杠由谁决定(网络本身不建模碰杠)")
+    ap.add_argument("--claim", choices=["v31", "hv", "deploy"], default="v31",
+                    help="模型的碰/杠由谁决定: v31=规则, hv=分析器E判据, "
+                         "deploy=直接用线上 NetBot(E判据+选择性碰牌)")
+    ap.add_argument("--raw-score", action="store_true",
+                    help="得分列用真实净分(score_delta)而非调整得分 —— 验收主指标")
+    ap.add_argument("--first-win-only", action="store_true",
+                    help="只跑首胡(线上规则), 不跑血战到底")
     args = ap.parse_args()
     fac, tag = make_factory(args.ckpt, args.claim)
     seeds = list(range(args.seed0, args.seed0 + args.seeds))
-    print(f"候选: {tag}\n基线: v31n   {args.seeds} seed × 4 座位 (CRN 配对)")
-    for bloody, name in ((False, "首胡(线上规则)"), (True, "血战到底")):
-        ev = eval_crn.paired_vs_v31(fac, seeds, bloody=bloody)
+    score_name = "真实净分差" if args.raw_score else "调整得分差"
+    print(f"候选: {tag}\n基线: v31n   {args.seeds} seed × 4 座位 "
+          f"(CRN 配对, {score_name}口径)")
+    modes = ((False, "首胡(线上规则)"),) if args.first_win_only else \
+        ((False, "首胡(线上规则)"), (True, "血战到底"))
+    for bloody, name in modes:
+        ev = eval_crn.paired_vs_v31(fac, seeds, bloody=bloody,
+                                    raw_score=args.raw_score)
         r, s = ev["rank"], ev["score"]
         print(f"\n[{name}]")
         print(f"  名次奖励差 {r['mean']:+.4f} ± {r['se']:.4f}  t={r['t']:+.2f}"
-              f"   (n={r['n']})")
-        print(f"  调整得分差 {s['mean']:+.4f} ± {s['se']:.4f}  t={s['t']:+.2f}")
+              f"   (n={r['n']}, 观测 {r['observations']})")
+        print(f"  {score_name} {s['mean']:+.4f} ± {s['se']:.4f}  t={s['t']:+.2f}"
+              f"   95%CI [{s['ci95_normal'][0]:+.4f}, {s['ci95_normal'][1]:+.4f}]")
         print(f"  候选自身: 名次奖励均 {ev['cand_rank_mean']:+.3f}  "
               f"得分均 {ev['cand_score_mean']:+.3f}")
 

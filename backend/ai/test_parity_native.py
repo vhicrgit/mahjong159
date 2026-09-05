@@ -22,10 +22,35 @@ PAIRS = {
 }
 
 
+TIE_TOL = 1e-9
+
+
+def _native_score_table(bot, hand_counts):
+    """C 侧逐候选分数(与 chooser 同一套代码)。v1 没有导出, 返回 None。
+
+    用途: C 与 Python 公式相同但求和顺序不同, cont(两步推演)会差 1e-15 量级;
+    两个候选本来同分时, argmax 会各自倒向不同的牌。这类"平局"不是逻辑分歧,
+    必须与真实分歧分开计数, 否则 PARITY FAIL 会变成一个大家习惯性忽略的噪声。
+    """
+    table = getattr(bot, "_unseen_counts", None)
+    if table is None:
+        return None
+    unseen = bot._unseen_counts()
+    penged = [0] * 28
+    for t in bot._penged_by_others():
+        penged[t] = 1
+    from ..native import native
+    return {d["tile"]: d["score"] for d in native.score_discards_v10(
+        list(hand_counts), list(unseen), penged, bot._endgame_factor(),
+        bot.shanten_weight, bot.ukeire_weight, bot.cont_weight,
+        bot.risk_weight, bot.cont_max_shanten)}
+
+
 def per_decision(kind: str, n_games: int, seed0: int):
     PyCls, NaCls = PAIRS[kind]
     bad = {"discard": 0, "peng": 0, "gang": 0}
     cnt = {"discard": 0, "peng": 0, "gang": 0}
+    ties = 0
     melded_discards = 0
     for gi in range(n_games):
         g = Game(seed=seed0 + gi, human_seat=-1)
@@ -42,11 +67,25 @@ def per_decision(kind: str, n_games: int, seed0: int):
                 if g.players[s].melds:
                     melded_discards += 1
                 if a != b:
-                    bad["discard"] += 1
-                    if bad["discard"] <= 3:
-                        print(f"  DISCARD 分歧 seed={seed0+gi} seat={s} "
-                              f"py={a} native={b} melds={g.players[s].melds} "
-                              f"hand={g.players[s].hand}")
+                    sc = _native_score_table(na[s], g.players[s].hand_counts)
+                    tied = (sc is not None and a in sc and b in sc and
+                            abs(sc[a] - sc[b]) <=
+                            TIE_TOL * max(1.0, abs(sc[a]), abs(sc[b])))
+                    if tied:
+                        ties += 1
+                        if ties <= 3:
+                            print(f"  DISCARD 浮点平局 seed={seed0+gi} seat={s} "
+                                  f"py={a} native={b} 分差={sc[a] - sc[b]:+.2e} "
+                                  f"(score={sc[a]!r})")
+                    else:
+                        bad["discard"] += 1
+                        if bad["discard"] <= 3:
+                            detail = "" if sc is None else \
+                                f" 分差={sc.get(a, 0) - sc.get(b, 0):+.6f}"
+                            print(f"  DISCARD 分歧 seed={seed0+gi} seat={s} "
+                                  f"py={a} native={b}{detail} "
+                                  f"melds={g.players[s].melds} "
+                                  f"hand={g.players[s].hand}")
                 g.action_discard(s, a)
             else:
                 s = list(g.pending_actions.keys())[0]
@@ -77,7 +116,7 @@ def per_decision(kind: str, n_games: int, seed0: int):
                         g.action_peng(s)
                         continue
                 g.action_pass(s)
-    return bad, cnt, melded_discards
+    return bad, cnt, melded_discards, ties
 
 
 def play(g, bots):
@@ -138,10 +177,13 @@ def main():
     ok = True
     for kind in args.bots.split(","):
         print(f"=== {kind}")
-        bad, cnt, melded = per_decision(kind, args.games, args.seed0)
-        print(f"  逐决策: discard {bad['discard']}/{cnt['discard']} 分歧"
+        bad, cnt, melded, ties = per_decision(kind, args.games, args.seed0)
+        print(f"  逐决策: discard 真实分歧 {bad['discard']}/{cnt['discard']} "
               f"(其中副露手 {melded} 次), peng {bad['peng']}/{cnt['peng']}, "
               f"gang {bad['gang']}/{cnt['gang']}")
+        if ties:
+            print(f"  另有浮点平局 {ties} 次: C 与 Python 公式相同但求和顺序不同, "
+                  f"同分候选的 argmax 各倒一边, 不计入分歧")
         wbad, t_py, t_na = whole_game(kind, args.whole_games,
                                       args.seed0 + 500000)
         print(f"  整局: {wbad}/{args.whole_games} 局日志或得分不一致")

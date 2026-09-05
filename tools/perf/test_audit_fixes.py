@@ -150,6 +150,68 @@ class AuditFixes(unittest.TestCase):
                                  [p.score_delta for p in ref.players])
 
 
+    def test_four_meld_ukeire_counts_only_the_pair_wait(self):
+        """C 的进张链曾把四副露单钓当成搭子(tiles_info 少了 need==0 特判)。"""
+        from backend.ai.bot_v31 import _tiles_m
+        from backend.native import native
+        cases = [([0, 8], "两条不同花色的孤张"), ([5, 5], "对子"),
+                 ([8, 27], "孤张 + 红中"), ([27, 27], "双红中")]
+        for tiles, _ in cases:
+            hand = [0] * 28
+            for t in tiles:
+                hand[t] += 1
+            unseen = [((t * 7) % 5) for t in range(28)]
+            for t in tiles:
+                unseen[t] = min(unseen[t], 4 - hand[t])
+            c = {d["tile"]: d for d in native.score_discards_v10(
+                hand, unseen, [0] * 28, 0.0, 100.0, 1.0, 0.5, 0.0, 2)}
+            for t in set(tiles):
+                kept = list(hand)
+                kept[t] -= 1
+                waits = sorted(_tiles_m(tuple(kept), 4)[1])
+                expect = sum(unseen[w] for w in waits)
+                self.assertEqual(c[t]["ukeire"], expect,
+                                 f"四副露留 {kept} 的进张数与 Python 参考不一致")
+                self.assertEqual(c[t]["shanten"], 0)
+                if sum(kept) == 1:
+                    # 单钓只认"这张牌自己 + 红中癞子"; 孤张红中本身能与任意牌成对
+                    lone = next(i for i in range(28) if kept[i])
+                    expect = list(range(28)) if lone == 27 else sorted({lone, 27})
+                    self.assertEqual(waits, expect)
+            if sum(hand) == 2 and hand[27] == 0 and tiles[0] != tiles[1]:
+                # 一张绝张一张有剩时, 必须留有余张的那一侧
+                a, b = tiles
+                unseen[a], unseen[b] = 0, 3
+                self.assertEqual(native.choose_discard_v10(
+                    hand, unseen, [0] * 28, 0.0, 100.0, 1.0, 0.5, 0.0, 2), a)
+
+    def test_public_state_hides_other_seats_private_information(self):
+        from backend.rules.tiles import tile_name
+        g = Game(seed=3, human_seat=-1)
+        g.players[2].hand = sorted([5, 5, 5, 5, 1, 2, 3, 4, 6, 7, 8, 9, 10])
+        g.phase = "discard_wait"
+        g.turn = 2
+        g.last_drawn = {"seat": 2, "tile": 5}
+        g.pending_actions = {2: {"peng": False, "gang": True}}
+        g.log.append(f"座位2 摸牌 {tile_name(5)}")
+        g.log.append(f"座位0 摸牌 {tile_name(1)}")
+
+        enemy = g.public_state(0)
+        self.assertEqual(enemy["last_drawn"], {"seat": 2})
+        self.assertEqual(enemy["gang_options"], [])
+        self.assertEqual(enemy["pending_actions"], {})
+        self.assertTrue(all(p["hand"] is None for p in enemy["players"] if p["seat"]))
+        self.assertIn(f"座位2 摸牌", enemy["log"])
+        self.assertNotIn(tile_name(5), enemy["log"][-2])
+        self.assertIn(tile_name(1), enemy["log"][-1])   # 自家摸牌仍然可见
+
+        mine = g.public_state(2)
+        self.assertEqual(mine["last_drawn"], {"seat": 2, "tile": 5})
+        self.assertEqual(mine["gang_options"], [5])
+        self.assertEqual(mine["pending_actions"], {2: {"peng": False, "gang": True}})
+        self.assertIn(tile_name(5), mine["log"][-2])
+
+
 if __name__ == '__main__':
     torch.set_num_threads(1)
     unittest.main()

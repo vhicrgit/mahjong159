@@ -59,6 +59,7 @@ KIND_INFO = {
     "v1":         ("菜鸟", "规则Bot v1: 牌效优先"),
     "v10":        ("中鸟", "规则Bot v10: 广义进张+两步推演"),
     "v31":        ("老鸟", "规则Bot v31: v10+副露感知碰牌"),
+    "v32":        ("老鸟+", "规则Bot v32: v31+听牌后选择性碰牌(听口严格变宽才碰)"),
     "scholar":    ("学者", "牌型价值分析器: 每手算期望胡牌巡数"),
     "acnn":       ("AC学者", "神经网络: 分析器E值 DAgger 模仿(软标签) + E判据碰杠"),
     "target":     ("目标", "目标路线概率 Bot"),
@@ -82,6 +83,9 @@ def make_bot(kind: str | None, game, seat: int, param: int = 0):
             return info[1].Bot(game, seat, **info[3])
     if kind in ("v31", "normal"):
         from .bot_v31 import Bot as B
+        return B(game, seat)
+    if kind == "v32":
+        from .bot_v32 import Bot as B
         return B(game, seat)
     if kind == "v10":
         from .bot_v10 import Bot as B

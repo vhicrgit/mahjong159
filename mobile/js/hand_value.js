@@ -125,16 +125,26 @@ class HandAnalyzer {
       if (hand[t] !== 2 || u[t] <= 0) continue;
       const h2 = hand.slice();
       h2[t] -= 2;
-      // 碰后须打一张: 找最优弃牌(最小向听)
-      let bestD = -1, bestS = 99;
+      // 碰后须打一张: 最小向听优先, 同向听取进张最宽(与 Python/C 同口径)
+      let bestS = 99;
       for (let d = 0; d < 28; d++) {
         if (h2[d] <= 0) continue;
         h2[d]--;
         const sd = shanten(h2);
         h2[d]++;
-        if (sd < bestS) { bestS = sd; bestD = d; }
+        if (sd < bestS) bestS = sd;
       }
-      if (bestS < s) out.push([t, u[t] * 3.0 * this.rho, bestD, bestS]);
+      if (bestS >= s) continue;              // 碰不降向听 -> 无价值
+      let bestD = -1, bestU = -1;
+      for (let d = 0; d < 28; d++) {
+        if (h2[d] <= 0) continue;
+        h2[d]--;
+        const ud = shanten(h2) === bestS ? this._ukeire(h2, u) : -1;
+        h2[d]++;
+        if (ud > bestU) { bestU = ud; bestD = d; }   // 同进张保留牌号小的
+      }
+      if (bestD < 0) continue;
+      out.push([t, u[t] * 3.0 * this.rho, bestD, bestS]);
     }
     return out;
   }

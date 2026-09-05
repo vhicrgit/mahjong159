@@ -1,0 +1,9 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+A: v32 (v31n + 听牌后选择性碰牌)
+B: v31n
+4096 seed × 4 座位, 对手 v31n, CRN 配对, 真实净分差口径
+
+[首胡(线上规则)]  A - B
+  名次奖励差 +0.0069 ± 0.0023  t=+3.05  (n=4096, 观测 16384)
+  真实净分差 +0.0215 ± 0.0077  t=+2.80   95%CI [+0.0065, +0.0366]

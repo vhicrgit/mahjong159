@@ -21,6 +21,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 _SO = os.path.join(_HERE, "libmj159.so")
 _SRC = os.path.join(_HERE, "mj159.c")
+# mj159.c 尾部 #include 的共享 E 引擎: 只比 mj159.c 会让引擎改动静默不生效
+_HV_INC = os.path.join(_ROOT, "mobile", "wasm", "hv_engine_inc.c")
 
 _LIB = None
 
@@ -43,7 +45,8 @@ def _compile():
 def _need_build() -> bool:
     if not os.path.exists(_SO):
         return True
-    return os.path.getmtime(_SO) < os.path.getmtime(_SRC)
+    built = os.path.getmtime(_SO)
+    return any(built < os.path.getmtime(p) for p in (_SRC, _HV_INC))
 
 
 def lib():

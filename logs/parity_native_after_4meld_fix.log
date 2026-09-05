@@ -1,0 +1,19 @@
+=== v1
+  逐决策: discard 真实分歧 0/771 (其中副露手 90 次), peng 0/37, gang 0/1
+  整局: 0/10 局日志或得分不一致
+  整局 CPU: py 0.60s vs native 0.02s -> 34x  (558.6 局/s/核)
+=== v10
+  DISCARD 浮点平局 seed=880013 seat=3 py=19 native=3 分差=+0.00e+00 (score=30.832471264367815)
+  DISCARD 浮点平局 seed=880015 seat=0 py=9 native=26 分差=-3.55e-15 (score=27.378061224489795)
+  逐决策: discard 真实分歧 0/669 (其中副露手 176 次), peng 0/82, gang 0/9
+  另有浮点平局 2 次: C 与 Python 公式相同但求和顺序不同, 同分候选的 argmax 各倒一边, 不计入分歧
+  整局: 0/10 局日志或得分不一致
+  整局 CPU: py 308.69s vs native 0.59s -> 521x  (16.9 局/s/核)
+=== v31
+  DISCARD 浮点平局 seed=880013 seat=3 py=19 native=3 分差=+0.00e+00 (score=30.832471264367815)
+  DISCARD 浮点平局 seed=880015 seat=0 py=9 native=26 分差=-3.55e-15 (score=27.378061224489795)
+  逐决策: discard 真实分歧 0/669 (其中副露手 176 次), peng 0/82, gang 0/9
+  另有浮点平局 2 次: C 与 Python 公式相同但求和顺序不同, 同分候选的 argmax 各倒一边, 不计入分歧
+  整局: 0/10 局日志或得分不一致
+  整局 CPU: py 47.09s vs native 0.25s -> 188x  (39.9 局/s/核)
+PARITY OK

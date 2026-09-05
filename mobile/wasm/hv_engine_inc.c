@@ -179,7 +179,10 @@ static void hve_channels(const i8 *hand, const i8 *u, int kai, HvCh *ch) {
         if (((um >> t) & 1u) && u[t] > 0) { ch->ut[nu] = t; ch->uw[nu] = u[t]; nu++; }
     ch->nu = nu;
 
-    /* 碰通道: 可碰且碰后最优向听严格降低的对子, t 升序 */
+    /* 碰通道: 可碰且碰后最优向听严格降低的对子, t 升序。
+     * 碰后弃牌 = 最小向听优先, 同向听取进张最宽(与 hand_value.py 同口径)。
+     * 只判"向听严格更小"会在同向听组里取到牌号最小的那张: 实测碰3条后
+     * 选打6条(进张7), 而打2饼进张10, 碰分支 E 被系统性高估。 */
     int np = 0;
     if (hv.rho > 0) {
         i8 h2[NTILE];
@@ -187,18 +190,26 @@ static void hve_channels(const i8 *hand, const i8 *u, int kai, HvCh *ch) {
             if (hand[t] != 2 || u[t] <= 0) continue;
             for (int i = 0; i < NTILE; i++) h2[i] = hand[i];
             h2[t] -= 2;
-            int bd = -1, bs = 99;
+            int bs = 99;
             for (int d = 0; d < NTILE; d++) {
                 if (h2[d] <= 0) continue;
                 h2[d]--;
                 int sd = hve_shanten(h2);
                 h2[d]++;
-                if (sd < bs) { bs = sd; bd = d; }
+                if (sd < bs) bs = sd;
             }
-            if (bs < s) {
-                ch->pt[np] = t; ch->pw[np] = (double)u[t] * 3.0 * hv.rho;
-                ch->pd[np] = bd; np++;
+            if (bs >= s) continue;          /* 碰不降向听 -> 无价值 */
+            int bd = -1, bu = -1;
+            for (int d = 0; d < NTILE; d++) {
+                if (h2[d] <= 0) continue;
+                h2[d]--;
+                int ud = (hve_shanten(h2) == bs) ? hve_ukeire(h2, u) : -1;
+                h2[d]++;
+                if (ud > bu) { bu = ud; bd = d; }   /* 同进张保留牌号小的 */
             }
+            if (bd < 0) continue;
+            ch->pt[np] = t; ch->pw[np] = (double)u[t] * 3.0 * hv.rho;
+            ch->pd[np] = bd; np++;
         }
     }
     ch->np = np;

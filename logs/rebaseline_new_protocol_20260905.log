@@ -1,0 +1,30 @@
+############ models/acnn_latest_best.pt ############
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+候选: models/acnn_latest_best.pt (size=small, iter=None, 碰杠=hv)
+基线: v31n   3000 seed × 4 座位 (CRN 配对, 真实净分差口径)
+
+[首胡(线上规则)]
+  名次奖励差 -0.0756 ± 0.0127  t=-5.94   (n=3000, 观测 12000)
+  真实净分差 -0.2037 ± 0.0413  t=-4.94   95%CI [-0.2846, -0.1229]
+  候选自身: 名次奖励均 -0.076  得分均 -0.204
+
+[血战到底]
+  名次奖励差 -0.1034 ± 0.0163  t=-6.36   (n=3000, 观测 12000)
+  真实净分差 -0.2469 ± 0.0526  t=-4.70   95%CI [-0.3500, -0.1439]
+  候选自身: 名次奖励均 -0.103  得分均 -0.247
+############ models/bc_r2_s3.pt ############
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+候选: models/bc_r2_s3.pt (size=small, iter=None, 碰杠=hv)
+基线: v31n   3000 seed × 4 座位 (CRN 配对, 真实净分差口径)
+
+[首胡(线上规则)]
+  名次奖励差 -0.0752 ± 0.0127  t=-5.91   (n=3000, 观测 12000)
+  真实净分差 -0.2013 ± 0.0412  t=-4.89   95%CI [-0.2821, -0.1206]
+  候选自身: 名次奖励均 -0.075  得分均 -0.201
+
+[血战到底]
+  名次奖励差 -0.1023 ± 0.0163  t=-6.28   (n=3000, 观测 12000)
+  真实净分差 -0.2438 ± 0.0526  t=-4.63   95%CI [-0.3470, -0.1407]
+  候选自身: 名次奖励均 -0.102  得分均 -0.244

@@ -28,6 +28,57 @@ def rand_hand(rng, size, nred):
     return c
 
 
+def _minus(hand, t):
+    h = list(hand)
+    h[t] -= 1
+    return h
+
+
+def check_ukeire_chain(rng, n):
+    """进张链对拍: native.score_discards_v10 vs bot_v31 的副露感知参考。
+
+    只比对外层 mj_shanten/mj_is_win 不够: tiles_info→ukeire 这条内部链曾漏掉
+    need==0(四副露只差将)特判, 单钓被当成两面/嵌张, 进张集偏大,
+    NativeV10/NativeV31 在这些局面选错牌。所以这里必须覆盖短手牌决策态。
+    """
+    from backend.ai.bot_v31 import _second_step_m, _sh, _ukeire_m
+
+    bad = bad_cont = 0
+    worst_cont = 0.0
+    for i in range(n):
+        total = rng.choice([2, 2, 5, 8, 11, 14])
+        n_melds = (14 - total) // 3
+        hand = rand_hand(rng, total, rng.choice([0, 0, 1, 2]))
+        unseen = [min(rng.randrange(5), 4 - hand[t]) for t in range(28)]
+        c = {d["tile"]: d for d in native.score_discards_v10(
+            hand, unseen, [0] * 28, 0.0, 100.0, 1.0, 0.5, 0.0, 2)}
+        min_sh = min(_sh(tuple(_minus(hand, t)), n_melds)
+                     for t in range(28) if hand[t] > 0)
+        for t in sorted(c):
+            h = tuple(_minus(hand, t))
+            s = _sh(h, n_melds)
+            u = 0 if s > min_sh else _ukeire_m(h, n_melds, tuple(unseen))
+            if c[t]["shanten"] != s or c[t]["ukeire"] != u:
+                bad += 1
+                if bad <= 5:
+                    print("   UKEIRE MISMATCH total", total, "hand",
+                          [(k, v) for k, v in enumerate(hand) if v],
+                          "打出", t, "native", c[t]["shanten"], c[t]["ukeire"],
+                          "py", s, u)
+            elif s <= min(min_sh, 2) and i % 20 == 0:
+                py_cont = _second_step_m(h, n_melds, tuple(unseen))
+                diff = abs(py_cont - c[t]["cont"])
+                worst_cont = max(worst_cont, diff)
+                if diff > 1e-6 * max(1.0, abs(py_cont)):
+                    bad_cont += 1
+                    if bad_cont <= 3:
+                        print("   CONT MISMATCH total", total, "打出", t,
+                              "native", c[t]["cont"], "py", py_cont)
+    print(f"进张链对拍 {n} 手: shanten/ukeire 不一致 {bad}, cont 不一致 {bad_cont} "
+          f"(cont 最大绝对差 {worst_cont:.2e})")
+    return bad == 0 and bad_cont == 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=60000)
@@ -84,7 +135,8 @@ def main():
     print(f"  cpu: native(sh+win) {t_nat:.2f}s | py shanten {t_py_sh:.2f}s | "
           f"py is_win {t_py_win:.2f}s")
     print(f"  加速比: shanten ~{t_py_sh/max(t_nat,1e-9):.0f}x (原生含判胡, 偏保守)")
-    ok = len(bad_sh) == 0 and len(bad_win) == 0
+    ok_chain = check_ukeire_chain(rng, max(500, args.n // 30))
+    ok = len(bad_sh) == 0 and len(bad_win) == 0 and ok_chain
     print("PARITY", "OK" if ok else "FAIL")
     raise SystemExit(0 if ok else 1)
 

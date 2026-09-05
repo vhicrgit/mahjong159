@@ -58,6 +58,9 @@ class HandAnalyzer:
                       else tuple(float(x) for x in self.u0))
         self.held_exp = tuple(float(x) for x in held_exp) \
             if held_exp is not None else None
+        # C 的牌池参数是 int8: 小数先验(如 0.8/0.2)过 ctypes 会被截断成 0,
+        # _fast_discard 的内层弃牌因此选错。标记出来后走 Python 口径。
+        self._u_float = any(abs(x - round(x)) > 1e-9 for x in self.u_eff)
         self.rho = rho
         self.kaizen = kaizen
         self.kai_margin = kai_margin
@@ -96,25 +99,69 @@ class HandAnalyzer:
                 wt = u[t] * 3.0 * self.rho
             h2 = list(hand)
             h2[t] -= 2
-            # 碰后须打一张: 找最优弃牌(最小向听, 同向听取进张最宽)
-            best_d, best_s = -1, 99
+            # 碰后须打一张: 最小向听优先, 同向听取进张最宽(与注释/v10 同口径)。
+            # 只比"向听严格更小"会让同向听组里取到牌号最小的那张 —— 实测碰3条后
+            # 选打6条(进张7, 后继E=12.375), 而打2饼进张10、E=9.0, 碰的价值被低估。
+            cands = []
             for d in range(28):
                 if h2[d] <= 0:
                     continue
                 h2[d] -= 1
-                sd = native.shanten(h2)
+                cands.append((native.shanten(h2), d))
                 h2[d] += 1
-                if sd < best_s:
-                    best_s, best_d = sd, d
+            if not cands:
+                continue
+            best_s = min(sd for sd, _ in cands)
+            best_d, best_u = -1, -1.0
+            for sd, d in cands:
+                if sd != best_s:
+                    continue
+                h2[d] -= 1
+                ud = self._ukeire(h2, u)
+                h2[d] += 1
+                if ud > best_u:            # 进张相同则保留牌号更小的, 保持确定性
+                    best_u, best_d = ud, d
             if best_s < s:
                 out[t] = (wt, best_d, best_s)
         return out
 
     def _fast_discard(self, h14, u):
         """摸到有效张后打出哪张: v10 牌效(只保留向听+进张, 关掉两步推演)。"""
+        if self._u_float:
+            return self._fast_discard_py(h14, u)
         zeros = [0] * 28
         return native.choose_discard_v10(h14, u, zeros, 0.0,
                                          100.0, 1.0, 0.0, 0.0, -1)
+
+    def _fast_discard_py(self, h14, u):
+        """牌池含小数时的 _fast_discard。
+
+        C 的牌池形参是 int8, 0.8/0.2 这类期望值过 ctypes 会被截断成 0 ——
+        实测手牌 1万(先验0.8)/9万(先验0.2) 时 C 选打 1万(进张4.2),
+        而按浮点算应该打 9万(进张4.8)。口径与 C 在 SW=100 UW=1 CW=0 RW=0
+        cont_max=-1 下逐位一致: 最小向听优先, 同向听取进张最宽, 同进张取牌号小的。
+        """
+        shs = {}
+        best_s = 99
+        for d in range(28):
+            if h14[d] <= 0:
+                continue
+            x = list(h14)
+            x[d] -= 1
+            sd = native.shanten(x)
+            shs[d] = sd
+            if sd < best_s:
+                best_s = sd
+        best_d, best_u = -1, -1.0
+        for d, sd in shs.items():
+            if sd != best_s:
+                continue
+            x = list(h14)
+            x[d] -= 1
+            uk = self._ukeire(x, u)
+            if uk > best_u:
+                best_u, best_d = uk, d
+        return best_d
 
     def _kai_candidates(self, hand, u, useful, s):
         """换型候选: [(t, w, gain, h2)], 已按 (-gain,-w) 排序并截断 topk。
@@ -188,7 +235,10 @@ class HandAnalyzer:
             h2 = list(hand)
             h2[t] -= 2
             u2 = list(u)
-            u2[t] -= 1
+            # held_exp 模式下第三张来自对手持牌, 而 u_eff 已经把对手持有期望扣掉,
+            # 再扣一次会把牌池扣成负数(实测 u_eff=0/held_exp=2 时出现 -1)。
+            if self.held_exp is None:
+                u2[t] -= 1
             h2[d] -= 1
             val += p * self.E(tuple(h2), tuple(u2), kai)
         self.memo[key] = val

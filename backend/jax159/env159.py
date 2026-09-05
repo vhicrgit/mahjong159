@@ -312,9 +312,13 @@ def legal_actions(state: State) -> jax.Array:
     # 补杠: 有碰且手持该牌
     bu_tiles = is_disc & (state.melds_kind[state.turn] == 1) & \
         (hand[state.melds_tile[state.turn]] > 0)
-    bu = jnp.zeros(27, bool)
-    bu = bu.at[state.melds_tile[state.turn].clip(0, 26)].set(bu_tiles)
-    m = m.at[55:82].set(bu)
+    # 空副露槽的 tile 默认 0, 与"一条"撞下标; scatter 对重复下标不保证顺序,
+    # .set 会让空槽的 False 盖掉一条的 True(实测补杠一条被判非法, 二条正常)。
+    # max 是顺序无关的 OR 归约。
+    bu = jnp.zeros(27, jnp.uint8)
+    bu = bu.at[state.melds_tile[state.turn].clip(0, 26)].max(
+        bu_tiles.astype(jnp.uint8))
+    m = m.at[55:82].set(bu.astype(bool))
     # 反应
     any_peng = state.pend_peng.any() & is_react
     any_gang = state.pend_gang.any() & is_react

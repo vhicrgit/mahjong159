@@ -202,6 +202,21 @@ int mj_shanten(const int8_t *c) {
     return shanten_code(&k);
 }
 
+/* 与 mj_shanten 同口径, 但供只有原始计数的内部调用链使用(tiles_info/ukeire)。
+   少了这层特判, 四副露的单钓会被 shanten_core 的 need clamp 当成搭子:
+   暗牌 1 张时算出向听 2, 于是"补成对"和"补成两面/嵌张"都被记作进张
+   (实测 400 手四副露里 97.8% 的进张集与 Python 参考不一致)。 */
+static inline int shanten_raw(const int8_t *c) {
+    Code k;
+    encode(c, &k);
+    if ((k.total - 1) / 3 > 0) return shanten_code(&k);
+    if (k.total <= 1) return 0;
+    if (k.red >= 1) return -1;
+    for (int i = 0; i < 27; i++)
+        if (c[i] >= 2) return -1;
+    return 1;
+}
+
 /* ---------------- 判胡 ---------------- */
 static int is_win_core(int c0, int c1, int c2, int red, int total) {
     if (total % 3 != 2) return 0;
@@ -257,7 +272,7 @@ static void tiles_info(const int8_t *c, int *out_sh, uint32_t *out_mask) {
         *out_mask = e->mask;
         return;
     }
-    int s = shanten_code(&k);
+    int s = shanten_raw(c);
     uint32_t mask = 0;
     int8_t g[28];
     memcpy(g, c, 28);
@@ -269,7 +284,7 @@ static void tiles_info(const int8_t *c, int *out_sh, uint32_t *out_mask) {
         if (s == 0) {
             if (is_win_code(&k2)) mask |= 1u << t;
         } else {
-            if (shanten_code(&k2) < s) mask |= 1u << t;
+            if (shanten_raw(g) < s) mask |= 1u << t;
         }
         g[t]--;
     }
