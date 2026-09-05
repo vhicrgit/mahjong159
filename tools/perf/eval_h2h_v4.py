@@ -26,6 +26,7 @@ def main():
     ap.add_argument("v2ckpt")
     ap.add_argument("--seeds", type=int, default=300)
     ap.add_argument("--seed0", type=int, default=151000000)
+    ap.add_argument("--first-win-only", action="store_true")
     args = ap.parse_args()
 
     cka = torch.load(args.v4ckpt, map_location="cpu", weights_only=True)
@@ -36,20 +37,26 @@ def main():
     mb.load_state_dict(ckb["model"]); mb.eval()
     print(f"A: {args.v4ckpt} (v4)   B: {args.v2ckpt} (v2)")
 
-    for bloody, name in ((False, "首胡(线上规则)"), (True, "血战到底")):
+    fd_b = ckb.get("feat_dim", 628)
+    rules = [(False, "首胡(线上规则)"), (True, "血战到底")]
+    if args.first_win_only:
+        rules = rules[:1]
+    for bloody, name in rules:
         seeds = list(range(args.seed0, args.seed0 + args.seeds))
         rra = np.zeros((args.seeds, 4)); sca = np.zeros((args.seeds, 4))
         rrb = np.zeros((args.seeds, 4)); scb = np.zeros((args.seeds, 4))
         for i, sd in enumerate(seeds):
-            # B 臂(便宜)先跑: 四座位轮转
             for s in range(4):
-                fac = {k: NativeV31 for k in range(4)}
-                fac[s] = lambda g, ss, s=s: NNSeat(g, ss, mb)
-                g = eval_crn._play(sd, bloody, fac)
+                # B 臂: v4 模型走 play_v4(带 tracker), v2 模型走 NNSeat
+                if fd_b == 718:
+                    g = play_v4(sd, bloody, mb, s)
+                else:
+                    fac = {k: NativeV31 for k in range(4)}
+                    fac[s] = lambda gg, ss, s=s: NNSeat(gg, ss, mb)
+                    g = eval_crn._play(sd, bloody, fac)
                 rrb[i, s] = g.rank_rewards()[s]
                 scb[i, s] = eval_crn._adjusted(g, s)
-            # A 臂(带 tracker)
-            for s in range(4):
+                # A 臂(v4, 带 tracker)
                 g = play_v4(sd, bloody, ma, s)
                 rra[i, s] = g.rank_rewards()[s]
                 sca[i, s] = eval_crn._adjusted(g, s)
