@@ -26,6 +26,7 @@ import torch
 
 from backend.analysis import hv_native
 from backend.game.engine import Game
+from backend.game.bot_driver import try_self_gang
 from backend.rl import cf_collect
 from backend.rl.features_v2 import encode_state
 from backend.rl.model import build_model, legal_discard_mask
@@ -80,6 +81,8 @@ def rollout_states(model, n_games, seed0, keep, bloody, temp, seed,
         for g in games:
             if g.phase == "react_wait":
                 _react_hv(g, model)
+            while g.phase == "discard_wait" and try_self_gang(g, _Seat(g, g.turn, model)):
+                pass
         idx = [i for i, g in enumerate(games) if g.phase == "discard_wait"]
         if not idx:
             break

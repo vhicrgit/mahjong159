@@ -27,6 +27,7 @@ import torch.nn.functional as F
 
 from backend.analysis.opp_model import OppTracker
 from backend.game.engine import Game
+from backend.game.bot_driver import finish_self_gangs
 from backend.rl import cf_collect
 from backend.rl.features_v2 import encode_state as encode_v2
 from backend.rl.features_v4 import opp_features
@@ -100,6 +101,10 @@ def collect_v4(model, n_games, seed0, snap_p, seed, n_init, beam):
                         for tr in trs_all[i][hero].values():
                             tr.notify_draw(s2, t2 if hero == s2 else None,
                                            g.wall_remaining())
+        from backend.ai.bot_native import NativeV31
+        for i, g in enumerate(games):
+            finish_self_gangs(g, NativeV31,
+                             [tr for per_hero in trs_all[i].values() for tr in per_hero.values()])
         idx = [i for i, g in enumerate(games) if g.phase == "discard_wait"]
         if not idx:
             break

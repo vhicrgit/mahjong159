@@ -17,6 +17,7 @@ import torch
 from backend.ai.bot_native import NativeV31
 from backend.analysis.opp_model import OppTracker
 from backend.game.engine import Game
+from backend.game.bot_driver import finish_self_gangs
 from backend.rl import eval_crn
 from backend.rl.features_v2 import encode_state as encode_v2
 from backend.rl.features_v4 import FEAT_DIM, opp_features
@@ -86,6 +87,9 @@ def play_v4(seed, bloody, model, hero, n_init=1500, beam=300):
     while g.phase != "game_over" and guard < 900:
         guard += 1
         if g.phase == "discard_wait":
+            finish_self_gangs(g, lambda gg, s: bots[s], trs.values())
+            if g.phase != "discard_wait":
+                continue
             s = g.turn
             d = bots[s].choose_discard()
             for tr in trs.values():

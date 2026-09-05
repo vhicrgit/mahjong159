@@ -1,0 +1,29 @@
+{
+  "purpose": "cross-fit one-action value under uniform hidden-world model; not match strength",
+  "states": 512,
+  "source_games": 379,
+  "crossfit_gain_per_game": {
+    "mean": -0.06539962620932278,
+    "se": 0.041682541889665733,
+    "n": 379,
+    "observations": 379,
+    "ci95_normal": [
+      -0.1470974083130676,
+      0.01629815589442206
+    ],
+    "t": -1.5689932342042983
+  },
+  "crossfit_gain_per_state": -0.05487060546875,
+  "in_sample_selected_gain_per_state": 0.8072509765625,
+  "switch_fraction": 0.634765625,
+  "sources": [
+    "models/audit_recovery_20260905/world32_0.npz",
+    "models/audit_recovery_20260905/world32_1.npz",
+    "models/audit_recovery_20260905/world32_2.npz",
+    "models/audit_recovery_20260905/world32_3.npz",
+    "models/audit_recovery_20260905/world32_4.npz",
+    "models/audit_recovery_20260905/world32_5.npz",
+    "models/audit_recovery_20260905/world32_6.npz",
+    "models/audit_recovery_20260905/world32_7.npz"
+  ]
+}

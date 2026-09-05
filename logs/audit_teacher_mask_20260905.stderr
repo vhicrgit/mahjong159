@@ -1,0 +1,46 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.2.6 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "/opt/conda/envs/python3.10/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/opt/conda/envs/python3.10/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/zuofengrui.zfr/old/mahjong159/tools/perf/audit_teacher_mask.py", line 13, in <module>
+    import torch
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/__init__.py", line 2475, in <module>
+    from torch import (
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/export/__init__.py", line 64, in <module>
+    from .dynamic_shapes import Constraint, Dim, dims, ShapesCollection
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/export/dynamic_shapes.py", line 23, in <module>
+    from .exported_program import ExportedProgram
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/export/exported_program.py", line 26, in <module>
+    from torch._higher_order_ops.utils import autograd_not_implemented
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/_higher_order_ops/__init__.py", line 1, in <module>
+    from torch._higher_order_ops.cond import cond
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/_higher_order_ops/cond.py", line 6, in <module>
+    import torch._subclasses.functional_tensor
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/_subclasses/functional_tensor.py", line 46, in <module>
+    class FunctionalTensor(torch.Tensor):
+  File "/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/_subclasses/functional_tensor.py", line 295, in FunctionalTensor
+    cpu = _conversion_method_template(device=torch.device("cpu"))
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/_subclasses/functional_tensor.py:295: UserWarning: Failed to initialize NumPy: 
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.2.6 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+ (Triggered internally at /workspace/code/xla/2.5/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))

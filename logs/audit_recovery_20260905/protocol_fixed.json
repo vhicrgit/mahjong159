@@ -1,0 +1,16 @@
+{
+  "self_kong": {
+    "self_kong_options_at_discard": 0,
+    "self_kong_callbacks": 8,
+    "ming_kong_callbacks": 8,
+    "games": 120
+  },
+  "v1_vs_v31_first_win_rank": {
+    "mean": -0.25625,
+    "old_se": 0.0745399147790492,
+    "cluster_se": 0.05793651293279847,
+    "independent_seeds": 120,
+    "seat_observations": 480,
+    "purpose": "protocol diagnostic only; does not re-evaluate the NN champion"
+  }
+}

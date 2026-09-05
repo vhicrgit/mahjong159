@@ -1,0 +1,22 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+models/teach64_conf.npz: 1561 条 (验证 312) 教师标签; value有效=0; split=ROW-ONLY legacy; strength requires fresh games
+models/k0_nn.npz: 103934 条 (验证 5196) 软标签; value有效=103934; split=ROW-ONLY legacy; strength requires fresh games
+models/k0_nn_r2.npz: 56180 条 (验证 2809) 软标签; value有效=56180; split=ROW-ONLY legacy; strength requires fresh games
+models/k0_nn_fw.npz: 42416 条 (验证 2120) 软标签; value有效=42416; split=ROW-ONLY legacy; strength requires fresh games
+训练样本(加权后) 212389   权重 [16.0, 1.0, 1.0, 1.0]
+热启动 models/bc_r2_s3.pt
+epoch  1 loss 1.2874 | teach64_conf.npz 命中 0.4679 | k0_nn.npz 命中 0.6886 | k0_nn_r2.npz 命中 0.6906 | k0_nn_fw.npz 命中 0.6236 
+epoch  2 loss 1.1409 | teach64_conf.npz 命中 0.4808 | k0_nn.npz 命中 0.6942 | k0_nn_r2.npz 命中 0.6970 | k0_nn_fw.npz 命中 0.6316 
+epoch  3 loss 1.1053 | teach64_conf.npz 命中 0.4936 | k0_nn.npz 命中 0.6990 | k0_nn_r2.npz 命中 0.6960 | k0_nn_fw.npz 命中 0.6462 
+epoch  4 loss 1.0837 | teach64_conf.npz 命中 0.4840 | k0_nn.npz 命中 0.7023 | k0_nn_r2.npz 命中 0.7020 | k0_nn_fw.npz 命中 0.6491 
+epoch  5 loss 1.0691 | teach64_conf.npz 命中 0.4904 | k0_nn.npz 命中 0.7063 | k0_nn_r2.npz 命中 0.7027 | k0_nn_fw.npz 命中 0.6481 
+epoch  6 loss 1.0584 | teach64_conf.npz 命中 0.5000 | k0_nn.npz 命中 0.7059 | k0_nn_r2.npz 命中 0.6988 | k0_nn_fw.npz 命中 0.6486 
+epoch  7 loss 1.0508 | teach64_conf.npz 命中 0.4872 | k0_nn.npz 命中 0.7030 | k0_nn_r2.npz 命中 0.6988 | k0_nn_fw.npz 命中 0.6505 
+epoch  8 loss 1.0453 | teach64_conf.npz 命中 0.4808 | k0_nn.npz 命中 0.7034 | k0_nn_r2.npz 命中 0.7010 | k0_nn_fw.npz 命中 0.6491 
+epoch  9 loss 1.0414 | teach64_conf.npz 命中 0.4808 | k0_nn.npz 命中 0.6998 | k0_nn_r2.npz 命中 0.6960 | k0_nn_fw.npz 命中 0.6514 
+epoch 10 loss 1.0388 | teach64_conf.npz 命中 0.4744 | k0_nn.npz 命中 0.7011 | k0_nn_r2.npz 命中 0.6995 | k0_nn_fw.npz 命中 0.6505 
+epoch 11 loss 1.0374 | teach64_conf.npz 命中 0.4776 | k0_nn.npz 命中 0.7013 | k0_nn_r2.npz 命中 0.6985 | k0_nn_fw.npz 命中 0.6514 
+epoch 12 loss 1.0367 | teach64_conf.npz 命中 0.4744 | k0_nn.npz 命中 0.7028 | k0_nn_r2.npz 命中 0.6988 | k0_nn_fw.npz 命中 0.6514 
+固定训练预算终点: models/audit_recovery_20260905/teacher_s72_last.pt
+已保存 models/audit_recovery_20260905/teacher_s72.pt  (自身分布命中 0.5000)

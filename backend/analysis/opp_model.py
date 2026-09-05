@@ -262,6 +262,41 @@ class OppTracker:
             if seat == self.hero_seat:
                 self.hero[tile] -= 2 if action == "peng" else 3
 
+    def notify_self_gang(self, seat: int, tile: int, kind: str):
+        """Concealed/added kong, before the replacement draw. Tile is public here."""
+        if kind not in ("an", "bu") or tile == 27:
+            raise ValueError("Invalid self-kong event")
+        removed = 4 if kind == "an" else 1
+        if seat == self.opp:
+            new = defaultdict(float)
+            for hand, weight in self.particles.items():
+                branches = self._draw_pool(hand) if self.pending_draw else [(None, 1.)]
+                for drawn, probability in branches:
+                    h = list(hand)
+                    if drawn is not None:
+                        h[drawn] += 1
+                    if h[tile] >= removed:
+                        h[tile] -= removed
+                        new[tuple(h)] += weight * probability
+            self.pending_draw = False
+            self.particles = dict(new)
+        if seat == self.hero_seat:
+            self.hero[tile] -= removed
+        if kind == "an":
+            self.melds[seat].append(("gang", tile, "an"))
+        else:
+            found = False
+            for i, meld in enumerate(self.melds[seat]):
+                if meld[0] == "peng" and meld[1] == tile:
+                    self.melds[seat][i] = ("gang", tile, "bu")
+                    found = True
+                    break
+            if not found:
+                raise ValueError("Added kong without a tracked pung")
+        if seat == self.opp:
+            self._prune()
+            self._recover_if_empty()
+
     def _filter_opp_claim(self, action: str | None, tile: int):
         new = {}
         for h, w in self.particles.items():

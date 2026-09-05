@@ -1,0 +1,395 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+25/300 seeds, 4.2s
+50/300 seeds, 4.2s
+75/300 seeds, 4.2s
+100/300 seeds, 4.6s
+125/300 seeds, 4.8s
+150/300 seeds, 8.4s
+175/300 seeds, 8.4s
+200/300 seeds, 8.4s
+225/300 seeds, 8.5s
+250/300 seeds, 8.5s
+275/300 seeds, 8.7s
+300/300 seeds, 9.4s
+{
+  "protocol": "first_or_bloody_full_actions_seed_cluster_v2",
+  "opponents": "3xNativeV31",
+  "claim": "hv",
+  "seed0": 206090500,
+  "seeds": 300,
+  "seconds": 9.604098558425903,
+  "reference": "models/bc_r2_s3.pt",
+  "differences_vs_reference": {
+    "models/bc_r2_s3.pt": {
+      "raw_score": {
+        "mean": 0.0,
+        "se": 0.0,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          0.0,
+          0.0
+        ],
+        "t": NaN
+      },
+      "rank": {
+        "mean": 0.0,
+        "se": 0.0,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          0.0,
+          0.0
+        ],
+        "t": NaN
+      },
+      "win": {
+        "mean": 0.0,
+        "se": 0.0,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          0.0,
+          0.0
+        ],
+        "t": NaN
+      },
+      "draw": {
+        "mean": 0.0,
+        "se": 0.0,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          0.0,
+          0.0
+        ],
+        "t": NaN
+      }
+    },
+    "models/audit_recovery_20260905/anchor_s71_last.pt": {
+      "raw_score": {
+        "mean": 0.0008333333333333334,
+        "se": 0.12251145109114421,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.23928911080530932,
+          0.24095577747197597
+        ],
+        "t": 0.006802085241104219
+      },
+      "rank": {
+        "mean": -0.009166666666666667,
+        "se": 0.037854572932950685,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.08336162961525001,
+          0.06502829628191667
+        ],
+        "t": -0.24215480340784667
+      },
+      "win": {
+        "mean": -0.0025,
+        "se": 0.009479559068531576,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.02107993577432189,
+          0.01607993577432189
+        ],
+        "t": -0.26372534649834306
+      },
+      "draw": {
+        "mean": 0.0008333333333333334,
+        "se": 0.0008333333333333332,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.0007999999999999996,
+          0.0024666666666666665
+        ],
+        "t": 1.0000000000000002
+      }
+    },
+    "models/audit_recovery_20260905/teacher_s71_last.pt": {
+      "raw_score": {
+        "mean": -0.04,
+        "se": 0.13518000716332948,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.30495281404012575,
+          0.22495281404012576
+        ],
+        "t": -0.29590174493533294
+      },
+      "rank": {
+        "mean": -0.03833333333333333,
+        "se": 0.04043853348861421,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.11759285897101718,
+          0.04092619230435052
+        ],
+        "t": -0.9479407393476913
+      },
+      "win": {
+        "mean": -0.01,
+        "se": 0.010138395731300848,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.029871255633349664,
+          0.009871255633349662
+        ],
+        "t": -0.9863493460929356
+      },
+      "draw": {
+        "mean": 0.0016666666666666668,
+        "se": 0.001176538896742527,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.0006393495709486861,
+          0.00397268290428202
+        ],
+        "t": 1.4165844166148287
+      }
+    },
+    "models/audit_recovery_20260905/random_s71_last.pt": {
+      "raw_score": {
+        "mean": 0.08166666666666667,
+        "se": 0.1332897434321155,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.17958123046027968,
+          0.342914563793613
+        ],
+        "t": 0.6127003065938041
+      },
+      "rank": {
+        "mean": 0.013333333333333334,
+        "se": 0.040885770485194074,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.06680277681764704,
+          0.09346944348431371
+        ],
+        "t": 0.3261118275406286
+      },
+      "win": {
+        "mean": 0.0033333333333333335,
+        "se": 0.010221442621298519,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.01670069420441176,
+          0.02336736087107843
+        ],
+        "t": 0.3261118275406286
+      },
+      "draw": {
+        "mean": 0.0,
+        "se": 0.0,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          0.0,
+          0.0
+        ],
+        "t": NaN
+      }
+    },
+    "models/audit_recovery_20260905/anchor_s72_last.pt": {
+      "raw_score": {
+        "mean": -0.0325,
+        "se": 0.11999724193225836,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.2676945941872264,
+          0.20269459418722638
+        ],
+        "t": -0.27083955828207384
+      },
+      "rank": {
+        "mean": -0.0225,
+        "se": 0.03724195872143598,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.09549423909401453,
+          0.05049423909401452
+        ],
+        "t": -0.6041572670303536
+      },
+      "win": {
+        "mean": -0.005833333333333334,
+        "se": 0.00932641784730368,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.024113112314048547,
+          0.012446445647381881
+        ],
+        "t": -0.6254634339613877
+      },
+      "draw": {
+        "mean": 0.0008333333333333334,
+        "se": 0.0008333333333333332,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.0007999999999999996,
+          0.0024666666666666665
+        ],
+        "t": 1.0000000000000002
+      }
+    },
+    "models/audit_recovery_20260905/teacher_s72_last.pt": {
+      "raw_score": {
+        "mean": -0.056666666666666664,
+        "se": 0.13574648754740104,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.32272978225957266,
+          0.20939644892623935
+        ],
+        "t": -0.4174448097368217
+      },
+      "rank": {
+        "mean": -0.04833333333333333,
+        "se": 0.040264477743630275,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.12725170971084868,
+          0.030585043044182005
+        ],
+        "t": -1.2003963801810276
+      },
+      "win": {
+        "mean": -0.0125,
+        "se": 0.010094660663590601,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.03228553490063758,
+          0.007285534900637578
+        ],
+        "t": -1.238278374733781
+      },
+      "draw": {
+        "mean": 0.0016666666666666668,
+        "se": 0.001176538896742527,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.0006393495709486861,
+          0.00397268290428202
+        ],
+        "t": 1.4165844166148287
+      }
+    },
+    "models/audit_recovery_20260905/random_s72_last.pt": {
+      "raw_score": {
+        "mean": 0.03,
+        "se": 0.14202037946306034,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.24835994374759826,
+          0.30835994374759823
+        ],
+        "t": 0.2112372894187558
+      },
+      "rank": {
+        "mean": -0.015833333333333335,
+        "se": 0.04262659572321693,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.09938146095083851,
+          0.06771479428417183
+        ],
+        "t": -0.37144259504423854
+      },
+      "win": {
+        "mean": -0.004166666666666667,
+        "se": 0.010654339832432474,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.025049172738234315,
+          0.016715839404900984
+        ],
+        "t": -0.3910769444375215
+      },
+      "draw": {
+        "mean": 0.0008333333333333334,
+        "se": 0.0008333333333333332,
+        "n": 300,
+        "observations": 1200,
+        "ci95_normal": [
+          -0.0007999999999999996,
+          0.0024666666666666665
+        ],
+        "t": 1.0000000000000002
+      }
+    }
+  }
+}

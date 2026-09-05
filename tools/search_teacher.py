@@ -1,23 +1,16 @@
-"""搜索教师(expert iteration): 用同墙反事实 rollout 给出比分析器更强的标签。
+"""Search teacher with explicit hidden-world and reward semantics.
 
-为什么不是 RL: 同一份反事实信号, 当策略梯度用时每样本 corr²(adv,ΔE) 只有
-0.017, 实跑必然退化(从任何起点都掉 0.2~0.3 分/局, 已试过整局/反事实/温和
-步长/温度匹配四种配置)。但同一份信号**当监督标签**用时, 可以对同一个
-(状态, 动作) 重复 N 次 rollout 取平均, 噪声按 1/√N 收敛, 再喂给交叉熵 ——
-监督梯度的方差与标签噪声不是一回事。
+The CLI defaults to first-win, uniform count-consistent hidden-world sampling,
+raw terminal score, and deployed HV claim rules. Candidates share the same set
+of worlds. Continuation bots observe only their own encoded features. This is
+an approximate world model, not a calibrated posterior from opponent history.
 
-与分析器教师的区别: 分析器最小化期望巡数 E, 看不见防守和对手; rollout 直接
-用终局名次奖励打分, 天然包含"这张牌会不会喂给别人"。所以它的上限高于分析器,
-这是唯一一条能真正超过 -0.06 分/局 那条线的路。
+The low-level score_candidates function retains explicit legacy fixed-world
+support for older callers. Repeating a fixed hidden world only reduces policy
+sampling noise; it does not integrate hidden-state uncertainty.
 
-做法:
-  对采样到的状态, 取策略前 K 个候选(全枚举太贵), 每个候选用**同一副牌墙**
-  重放 N 次(四家都用当前策略, temp>0 制造多样性), 取平均名次奖励;
-  标签 = softmax(score/τ) 只在这 K 个候选上。
-
-用法:
-  python -m tools.search_teacher --model models/bc_k0_r3.pt --states 4000 \
-      --topk 3 --rolls 8 --out models/teach_r1.npz
+Use check_world_teacher to select and evaluate actions on disjoint worlds before
+claiming teacher improvement. In-sample max score is selection-biased.
 """
 
 import argparse
@@ -32,13 +25,24 @@ from backend.game.engine import Game
 from backend.rl import cf_collect
 from backend.rl.features_v2 import encode_state
 from backend.rl.model import build_model, legal_discard_mask
+from backend.rl.hidden_worlds import sample_world
 
 
-def collect_states(model, n_games, seed0, snap_p, seed, bloody=True, temp=1.0):
+def claim_factory(model, claim):
+    if claim == "hv":
+        from tools.dagger_collect import _Seat
+        return lambda g, s: _Seat(g, s, model)
+    from backend.ai.bot_native import NativeV31
+    return NativeV31
+
+
+def collect_states(model, n_games, seed0, snap_p, seed, bloody=True, temp=1.0,
+                   claim="v31"):
     rng = np.random.default_rng(seed)
     games = [Game(seed=seed0 + i, human_seat=-1, bloody=bloody)
              for i in range(n_games)]
-    _, snaps = cf_collect.run_games(model, "cpu", games, temp, snap_p, rng)
+    _, snaps = cf_collect.run_games(model, "cpu", games, temp, snap_p, rng,
+                                    make_claim_bot=claim_factory(model, claim))
     return snaps
 
 
@@ -58,36 +62,50 @@ def topk_actions(model, snaps, k):
     return out, feats, masks.numpy()
 
 
-def score_candidates(model, snaps, cands, rolls, temp, chunk_states=150):
+def score_candidates(model, snaps, cands, rolls, temp, chunk_states=150,
+                     world_mode="fixed", seed=0, return_rollouts=False,
+                     reward="rank", claim="v31"):
     """同墙重放: 返回 (n_states, max_k) 的平均奖励矩阵(无效位 nan)。"""
     maxk = max(len(c) for c in cands)
     S = np.full((len(snaps), maxk), np.nan, dtype=np.float32)
+    returns = np.full((len(snaps), maxk, rolls), np.nan, dtype=np.float32)
+    rng = np.random.default_rng(seed)
+    if world_mode not in ("fixed", "resample") or rolls < 1 or reward not in ("rank", "score"):
+        raise ValueError("Invalid world mode, reward, or rollout count")
+    if world_mode == "fixed":
+        print("WARNING: legacy fixed-world rollouts do not average hidden-world uncertainty", flush=True)
     for lo in range(0, len(snaps), chunk_states):
         hi = min(lo + chunk_states, len(snaps))
         jobs, keys = [], []
         for i in range(lo, hi):
+            worlds = [sample_world(snaps[i]["game"], snaps[i]["seat"], rng)
+                      if world_mode == "resample" else snaps[i]["game"]
+                      for _ in range(rolls)]
             for ci, a in enumerate(cands[i]):
-                for _ in range(rolls):
-                    g = copy.deepcopy(snaps[i]["game"])
+                for wi, world in enumerate(worlds):
+                    g = copy.deepcopy(world)
                     g.action_discard(snaps[i]["seat"], a)
                     jobs.append(g)
-                    keys.append((i, ci))
+                    keys.append((i, ci, wi))
         if not jobs:
             continue
-        jobs, _ = cf_collect.run_games(model, "cpu", jobs, temp)
+        jobs, _ = cf_collect.run_games(model, "cpu", jobs, temp,
+                                       make_claim_bot=claim_factory(model, claim))
         acc = {}
-        for g, (i, ci) in zip(jobs, keys):
-            r = cf_collect.default_reward(g, snaps[i]["seat"])
+        for g, (i, ci, wi) in zip(jobs, keys):
+            seat = snaps[i]["seat"]
+            r = g.players[seat].score_delta if reward == "score" else cf_collect.default_reward(g, seat)
+            returns[i, ci, wi] = r
             acc.setdefault((i, ci), []).append(r)
         for (i, ci), vs in acc.items():
             S[i, ci] = float(np.mean(vs))
         print(f"  ...状态 {hi}/{len(snaps)}  重放 {len(jobs)} 局", flush=True)
-    return S
+    return (S, returns) if return_rollouts else S
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="models/bc_k0_r3.pt")
+    ap.add_argument("--model", default="models/bc_r2_s3.pt")
     ap.add_argument("--states", type=int, default=4000)
     ap.add_argument("--games", type=int, default=0,
                     help="0 = 按 states 自动推算局数")
@@ -97,7 +115,17 @@ def main():
     ap.add_argument("--tau", type=float, default=0.5, help="标签 softmax 温度")
     ap.add_argument("--seed0", type=int, default=90000000)
     ap.add_argument("--out", default="models/teach_r1.npz")
+    ap.add_argument("--world-mode", choices=["fixed", "resample"], default="resample")
+    ap.add_argument("--bloody", action="store_true", help="Legacy blood-battle requires --world-mode fixed")
+    ap.add_argument("--seed", type=int, default=20260905)
+    ap.add_argument("--reward", choices=["rank", "score"], default="score")
+    ap.add_argument("--claim", choices=["v31", "hv"], default="hv")
     args = ap.parse_args()
+    if args.bloody and args.world_mode != "fixed":
+        ap.error("Blood-battle needs a history-conditioned sampler; use first-win or explicit legacy fixed")
+    if args.states < 1 or args.rolls < 1 or args.topk < 1 or args.tau <= 0:
+        ap.error("states, rolls, topk and tau must be positive")
+    torch.manual_seed(args.seed)
 
     ck = torch.load(args.model, map_location="cpu", weights_only=True)
     model = build_model(ck["size"])
@@ -107,14 +135,17 @@ def main():
     # 血战一局约 45 次弃牌 × snap_p 0.06 ≈ 2.7 个状态/局
     n_games = args.games or max(50, int(args.states / 2.7))
     t0 = time.time()
-    snaps = collect_states(model, n_games, args.seed0, 0.06, 7)
+    snaps = collect_states(model, n_games, args.seed0, 0.06, args.seed,
+                           bloody=args.bloody, temp=args.temp, claim=args.claim)
     snaps = snaps[:args.states]
     print(f"采到 {len(snaps)} 个状态 ({n_games} 局, {time.time() - t0:.0f}s)",
           flush=True)
 
     cands, feats, masks = topk_actions(model, snaps, args.topk)
     t0 = time.time()
-    S = score_candidates(model, snaps, cands, args.rolls, args.temp)
+    S, returns = score_candidates(model, snaps, cands, args.rolls, args.temp,
+                                  world_mode=args.world_mode, seed=args.seed,
+                                  return_rollouts=True, reward=args.reward, claim=args.claim)
     print(f"打分完成 {time.time() - t0:.0f}s", flush=True)
 
     # 标签: 只在 topk 候选上做 softmax(score/tau), 其余为 0
@@ -135,8 +166,16 @@ def main():
             P[i, a] = w[ci]
         best[i] = cs[int(np.nanargmax(sc))]
 
+    candidates = np.full(S.shape, -1, dtype=np.int8)
+    for i, cs in enumerate(cands):
+        candidates[i, :len(cs)] = cs
     np.savez_compressed(args.out, feats=feats, target=P, bests=best,
-                        scores=S, labels=np.zeros(len(snaps), np.float32))
+                        scores=S, rollout_returns=returns, candidates=candidates,
+                        legal_mask=masks, value_valid=np.zeros(len(snaps), bool),
+                        game_id=np.array([args.seed0 + sn['gi'] for sn in snaps]),
+                        world_mode=args.world_mode, reward=args.reward,
+                        bloody=args.bloody, policy_model=args.model, claim=args.claim,
+                        labels=np.zeros(len(snaps), np.float32))
     # 教师与当前策略的分歧率 = 这批标签能带来多少改动
     with torch.no_grad():
         q, _ = model(torch.from_numpy(feats))

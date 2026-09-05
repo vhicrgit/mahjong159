@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from ..game.engine import Game
+from ..game.bot_driver import try_self_gang
 from ..ai.bot_v1 import Bot
 from ..rules.ting import discard_options
 from .features_v2 import encode_state
@@ -104,6 +105,9 @@ class VectorizedSelfPlay:
         return self._collect_results()
 
     def _step_discard(self, temperature: float):
+        for i, g in enumerate(self.games):
+            while g.phase == "discard_wait" and try_self_gang(g, self.bots[i][g.turn]):
+                pass
         # 分出哪些游戏需要模型推理, 哪些用规则Bot
         model_idxs = [i for i, g in enumerate(self.games)
                       if g.phase == "discard_wait" and g.turn in self.model_seats]

@@ -23,15 +23,16 @@ import torch.nn.functional as F
 
 from ..ai.bot_native import NativeV31
 from ..game.engine import Game
+from ..game.bot_driver import try_self_gang
 from .features_v2 import encode_state
 from .model import legal_discard_mask
 
 
-def _react(g):
+def _react(g, make_claim_bot=NativeV31):
     """把 react_wait 阶段走完(碰/杠用 v31 规则, 与评估口径一致)。"""
     while g.phase == "react_wait":
         s = list(g.pending_actions.keys())[0]
-        b = NativeV31(g, s)
+        b = make_claim_bot(g, s)
         hc = g.players[s].hand_counts
         if g.pending_actions[s].get("gang") and \
                 b.decide_gang(g.last_discard, "ming"):
@@ -56,13 +57,14 @@ def _policy_batch(model, device, games, seats, temp):
             logits = logits / max(temp, 1e-6)
         logp = F.log_softmax(logits, dim=-1)
         p = logp.exp()
-        a = torch.multinomial(p, 1).squeeze(-1)
+        a = logits.argmax(-1) if temp <= 0 else torch.multinomial(p, 1).squeeze(-1)
         lp = logp.gather(1, a.unsqueeze(1)).squeeze(1)
     return (a.cpu().numpy(), lp.cpu().numpy(), feats, masks.numpy(),
             p.cpu().numpy())
 
 
-def run_games(model, device, games, temp, snap_p=0.0, rng=None, max_iter=900):
+def run_games(model, device, games, temp, snap_p=0.0, rng=None, max_iter=900,
+              make_claim_bot=NativeV31):
     """把一批局面推到终局。snap_p>0 时按概率在决策点留快照。
 
     返回 (games, snaps); snaps 每项 = dict(gi=主线局号, game=局面副本, seat,
@@ -74,7 +76,9 @@ def run_games(model, device, games, temp, snap_p=0.0, rng=None, max_iter=900):
         it += 1
         for g in games:
             if g.phase == "react_wait":
-                _react(g)
+                _react(g, make_claim_bot)
+            while g.phase == "discard_wait" and try_self_gang(g, make_claim_bot(g, g.turn)):
+                pass
         idx = [i for i, g in enumerate(games) if g.phase == "discard_wait"]
         if not idx:
             break
@@ -89,6 +93,10 @@ def run_games(model, device, games, temp, snap_p=0.0, rng=None, max_iter=900):
                 p = probs[k].copy()
                 p[t] = 0.0
                 tot = p.sum()
+                if temp <= 0 and tot <= 1e-9:
+                    p = masks[k].astype(np.float32)
+                    p[t] = 0.0
+                    tot = p.sum()
                 if tot > 1e-9:
                     alt = int(rng.choice(len(p), p=p / tot))
                     snaps.append({"gi": i, "game": copy.deepcopy(g),
@@ -98,7 +106,9 @@ def run_games(model, device, games, temp, snap_p=0.0, rng=None, max_iter=900):
             g.action_discard(s, t)
     for g in games:
         if g.phase == "react_wait":
-            _react(g)
+            _react(g, make_claim_bot)
+    if any(g.phase != "game_over" for g in games):
+        raise RuntimeError("Rollout exceeded action limit before terminal state")
     return games, snaps
 
 
@@ -143,6 +153,8 @@ def collect_counterfactual(model, device, n_games, seed0, temp=1.0,
 def default_reward(g, seat, gang_w=0.25):
     """名次奖励 + gang_w × 自己杠分(放杠不罚)。实测 gang_w=0.25 几乎不抬噪声。"""
     r = g.rank_rewards()[seat]
+    if g.huangzhuang and not g.bloody:
+        return r  # 首胡黄庄不结杠
     v = 0.0
     for rec in g.gang_records:
         if rec["seat"] != seat:

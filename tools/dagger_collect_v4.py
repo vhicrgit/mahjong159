@@ -20,6 +20,7 @@ import torch
 from backend.ai.bot_native import NativeV31
 from backend.analysis.opp_model import OppTracker
 from backend.game.engine import Game
+from backend.game.bot_driver import finish_self_gangs
 from backend.rl.features_v2 import encode_state as encode_v2
 from backend.rl.features_v4 import opp_features
 from backend.rl.model import build_model, legal_discard_mask
@@ -89,6 +90,8 @@ def rollout(model, n_games, seed0, keep, bloody, rng, n_init, beam,
                         tr.notify_draw(seat2,
                                        t2 if hero == seat2 else None,
                                        g.wall_remaining())
+        for i, g in enumerate(games):
+            finish_self_gangs(g, NativeV31, trs[i].values())
         idx = [i for i, g in enumerate(games) if g.phase == "discard_wait"]
         if not idx:
             break

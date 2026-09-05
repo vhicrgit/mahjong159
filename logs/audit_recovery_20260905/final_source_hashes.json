@@ -1,0 +1,20 @@
+{
+  "backend/analysis/opp_model.py": "b3f507cbc4a044022eded145f3a1b276d569ef1f0de837bdd3a512a4c9f4fc44",
+  "backend/rl/cf_collect.py": "95ee0c91f77e446a33ab4abf72fb65e155acd057952978d57f88ad0f66340d72",
+  "backend/rl/eval_crn.py": "b39a4a2c900ed0b588c4f2e5af3239ce41c4f51b2024b8584015569babbb507e",
+  "backend/rl/vec_selfplay.py": "bc5a12fde5ad1f8c10866891e7a901b4695c6555453a65e9bef560ada58582b4",
+  "docs/README.md": "58f62ff6e8fcf4e53fb6b7e4a2f0d0e248613e94d3e0efb8a39fb14f1c6119ec",
+  "tools/dagger_collect.py": "63e89bafaf96513333215ca9d0ec671c3e3ba164b880c2eb3261dd665c2a3097",
+  "tools/dagger_collect_v4.py": "5b12d2a47bb871be4762502fb6b40304bc944da36bec4293e0e63bcaad1ad623",
+  "tools/dagger_train.py": "1dcd302bc664f045061047ef940292fcad6e7c757180bc0156f58548d9f9182f",
+  "tools/filter_teacher.py": "19d5cc75d1dcdb41e3ea4f75a7e340101befd2c144958db2dde736e038e24bcb",
+  "tools/perf/eval_ckpt_v4.py": "4296632ca131c888a97ed15ed853abe6f088a80cae5c1827117a2232eabcd7c2",
+  "tools/perf/eval_h2h_v4.py": "b60b4b773a543f71a0a9a610660e15e7264d912beea8ef2daa9209b31ec9d8a4",
+  "tools/search_teacher.py": "6ec922e9055f7328dffd3548005b9b685874e7f9373dfa342858670002d3eb09",
+  "tools/search_teacher_v4.py": "07fb79822e8d71d4c71b42309a6ef1afedec704ac221d65b6b771f03a9c7fb13",
+  "backend/game/bot_driver.py": "a48df5e3fbdbe7f1a5e60476e7d4952eb2c98eb49f68369f06b4d105dcbbaa7c",
+  "backend/rl/hidden_worlds.py": "279336c5142617727dd48ddb03ffdb709bcdb6d01bdf41f876de21427ef918b6",
+  "tools/perf/test_audit_fixes.py": "a4b86b3111fc548380ed01565e1c2f8d6ef295122285a902ae5e208fd55fe346",
+  "tools/perf/eval_recovery.py": "ab8efc30dfb445d8b401d54b39513d8f39e8dfadd84ac4a55836b45f99a106ce",
+  "tools/perf/check_world_teacher.py": "b3b0b50782d2e877892196c20bd3da26c543a236db24f447dea87b215c7b216f"
+}

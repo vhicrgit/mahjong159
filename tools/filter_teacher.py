@@ -42,22 +42,37 @@ def main():
     thr = args.k * se_diff
     print(f"单候选 SE {se1:.3f}  差的 SE {se_diff:.3f}  阈值 {thr:.3f}")
 
-    F, T, B = [], [], []
+    F, T, B, M, G = [], [], [], [], []
+    have_groups = True
     tot = 0
     gaps = []
     for p in paths:
         d = np.load(p)
         S, P, feats = d["scores"], d["target"], d["feats"]
+        paired = d["rollout_returns"] if "rollout_returns" in d.files else None
+        if paired is None:
+            print(f"WARNING {p}: legacy scores have no per-world returns; fixed-SD threshold is heuristic")
+        elif str(d["world_mode"]) != "resample":
+            print(f"WARNING {p}: repeated fixed-world returns do not measure hidden-world uncertainty")
+        if "game_id" not in d.files:
+            have_groups = False
         for i in range(len(S)):
             tot += 1
             s = S[i]
             ok = np.isfinite(s)
             if ok.sum() < 2:
                 continue
-            v = np.sort(s[ok])[::-1]
+            order = np.flatnonzero(ok)[np.argsort(s[ok])[::-1]]
+            v = s[order]
             gap = v[0] - v[1]
             gaps.append(gap)
-            if gap < thr:
+            threshold = thr
+            if paired is not None:
+                delta = paired[i, order[0]] - paired[i, order[1]]
+                if len(delta) < 2 or not np.isfinite(delta).all():
+                    continue
+                threshold = args.k * delta.std(ddof=1) / np.sqrt(len(delta))
+            if gap <= 0 or gap < threshold:
                 continue
             tile = int(np.argmax(P[i]))
             t = np.zeros(28, dtype=np.float32)
@@ -65,14 +80,19 @@ def main():
             F.append(feats[i])
             T.append(t)
             B.append(tile)
+            M.append(feats[i, :112].reshape(28, 4)[:, 0] == 0)
+            G.append(int(d["game_id"][i]) if "game_id" in d.files else -1)
     if not F:
         raise SystemExit("没有通过阈值的样本, 调小 --k 或加大 --rolls")
     gaps = np.array(gaps)
     print(f"分差分布: 均 {gaps.mean():.3f} 中位 {np.median(gaps):.3f} "
           f"90分位 {np.percentile(gaps, 90):.3f}")
+    extra = {"game_id": np.array(G)} if have_groups else {}
+    print("筛选使用同批选出的赢家/次优: 存在选择偏差，不构成独立验证的置信保证")
     np.savez_compressed(args.out, feats=np.stack(F), target=np.stack(T),
                         bests=np.array(B, dtype=np.int8),
-                        labels=np.zeros(len(B), dtype=np.float32))
+                        legal_mask=np.stack(M), value_valid=np.zeros(len(B), dtype=bool),
+                        labels=np.zeros(len(B), dtype=np.float32), **extra)
     print(f"已存 {args.out}  保留 {len(B)}/{tot} ({len(B) / tot:.1%})")
 
 

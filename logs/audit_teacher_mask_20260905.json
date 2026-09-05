@@ -1,0 +1,60 @@
+{
+  "toy": {
+    "old_loss": -0.0,
+    "old_grad": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "old_accuracy": 1.0,
+    "correct_loss": 2.4076058864593506,
+    "correct_grad": [
+      [
+        -0.9099694490432739,
+        0.24472849071025848,
+        0.665241003036499
+      ]
+    ],
+    "correct_accuracy": 0.0
+  },
+  "checkpoints": [
+    {
+      "data": "teach64_conf.npz",
+      "checkpoint": "bc_r2_s3.pt",
+      "validation_n": 500,
+      "old_accuracy": 1.0,
+      "legal_accuracy": 0.4699999988079071,
+      "old_policy_loss": -0.0,
+      "legal_policy_loss": 3.178511381149292
+    },
+    {
+      "data": "teach64_conf.npz",
+      "checkpoint": "ei64_a.pt",
+      "validation_n": 500,
+      "old_accuracy": 1.0,
+      "legal_accuracy": 0.44999998807907104,
+      "old_policy_loss": -0.0,
+      "legal_policy_loss": 1.587716817855835
+    },
+    {
+      "data": "teach64b_conf.npz",
+      "checkpoint": "ei64_a.pt",
+      "validation_n": 500,
+      "old_accuracy": 1.0,
+      "legal_accuracy": 0.5360000133514404,
+      "old_policy_loss": -0.0,
+      "legal_policy_loss": 1.3495368957519531
+    },
+    {
+      "data": "teach64b_conf.npz",
+      "checkpoint": "ei64_b.pt",
+      "validation_n": 500,
+      "old_accuracy": 1.0,
+      "legal_accuracy": 0.5400000214576721,
+      "old_policy_loss": -0.0,
+      "legal_policy_loss": 1.3566776514053345
+    }
+  ]
+}

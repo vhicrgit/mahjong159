@@ -16,6 +16,7 @@ from backend.ai.bot_native import NativeV31
 from backend.rl import eval_crn
 from backend.rl.model import build_model
 from tools.rl_bloody_train import NNSeat
+from tools.perf.eval_ckpt import NNHVClaim
 sys.path.insert(0, "tools/perf")
 from eval_ckpt_v4 import play_v4
 
@@ -52,7 +53,7 @@ def main():
                     g = play_v4(sd, bloody, mb, s)
                 else:
                     fac = {k: NativeV31 for k in range(4)}
-                    fac[s] = lambda gg, ss, s=s: NNSeat(gg, ss, mb)
+                    fac[s] = lambda gg, ss: NNHVClaim(gg, ss, mb)
                     g = eval_crn._play(sd, bloody, fac)
                 rrb[i, s] = g.rank_rewards()[s]
                 scb[i, s] = eval_crn._adjusted(g, s)

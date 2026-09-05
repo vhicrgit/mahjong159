@@ -41,3 +41,11 @@ models/*.bin
 
 # mjcore 原生编译产物(由 backend/analysis/hv_native.py 自动生成)
 backend/analysis/libmjcore.so
+
+# 外部依赖目录(不入库): Mortal 仓库克隆(自带 .git) + mortal_298k.pth(130MB,
+# AGPL-3.0, 超过 GitHub 单文件上限) + tools/mortal_selfplay.py 生成的 mjai 牌谱。
+# 复现 Mortal 蒸馏实验时本地准备:
+#   git clone https://github.com/Equim-chan/Mortal third_party/Mortal
+#   权重与 config.toml 放到 third_party/mortal-298k/
+#   libriichi 的 .so 构建到 /dev/shm/mortal_target/release(见 tools/mortal_selfplay.py)
+third_party/
