@@ -1,0 +1,19 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+models/k0_nn_fix_fw.npz: 73988 条 (验证 3699) 软标签; value有效=73988; split=ROW-ONLY legacy; strength requires fresh games
+训练样本(加权后) 70289   权重 [1.0]
+热启动 models/bc_r2_s3.pt
+epoch  1 loss 1.8254 | k0_nn_fix_fw.npz 命中 0.5191 
+epoch  2 loss 1.5079 | k0_nn_fix_fw.npz 命中 0.5218 
+epoch  3 loss 1.4493 | k0_nn_fix_fw.npz 命中 0.5320 
+epoch  4 loss 1.4232 | k0_nn_fix_fw.npz 命中 0.5380 
+epoch  5 loss 1.4079 | k0_nn_fix_fw.npz 命中 0.5420 
+epoch  6 loss 1.3978 | k0_nn_fix_fw.npz 命中 0.5412 
+epoch  7 loss 1.3907 | k0_nn_fix_fw.npz 命中 0.5458 
+epoch  8 loss 1.3856 | k0_nn_fix_fw.npz 命中 0.5474 
+epoch  9 loss 1.3821 | k0_nn_fix_fw.npz 命中 0.5474 
+epoch 10 loss 1.3799 | k0_nn_fix_fw.npz 命中 0.5483 
+epoch 11 loss 1.3786 | k0_nn_fix_fw.npz 命中 0.5485 
+epoch 12 loss 1.3780 | k0_nn_fix_fw.npz 命中 0.5483 
+固定训练预算终点: models/retrain_fix_20260905/fw_only_s72_last.pt
+已保存 models/retrain_fix_20260905/fw_only_s72.pt  (自身分布命中 0.5485)

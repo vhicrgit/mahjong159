@@ -1,0 +1,22 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+models/k0_nn_fix_fw.npz: 73988 条 (验证 3699) 软标签; value有效=73988; split=ROW-ONLY legacy; strength requires fresh games
+models/k0_nn.npz: 103934 条 (验证 5196) 软标签; value有效=103934; split=ROW-ONLY legacy; strength requires fresh games
+models/k0_nn_r2.npz: 56180 条 (验证 2809) 软标签; value有效=56180; split=ROW-ONLY legacy; strength requires fresh games
+models/k0_nn_fw.npz: 42416 条 (验证 2120) 软标签; value有效=42416; split=ROW-ONLY legacy; strength requires fresh games
+训练样本(加权后) 473561   权重 [4.0, 1.0, 1.0, 1.0]
+热启动 models/bc_r2_s3.pt
+epoch  1 loss 1.3722 | k0_nn_fix_fw.npz 命中 0.5531 | k0_nn.npz 命中 0.6846 | k0_nn_r2.npz 命中 0.7013 | k0_nn_fw.npz 命中 0.6226 
+epoch  2 loss 1.2681 | k0_nn_fix_fw.npz 命中 0.5580 | k0_nn.npz 命中 0.6953 | k0_nn_r2.npz 命中 0.7045 | k0_nn_fw.npz 命中 0.6462 
+epoch  3 loss 1.2484 | k0_nn_fix_fw.npz 命中 0.5602 | k0_nn.npz 命中 0.6957 | k0_nn_r2.npz 命中 0.7010 | k0_nn_fw.npz 命中 0.6505 
+epoch  4 loss 1.2359 | k0_nn_fix_fw.npz 命中 0.5618 | k0_nn.npz 命中 0.7017 | k0_nn_r2.npz 命中 0.7002 | k0_nn_fw.npz 命中 0.6533 
+epoch  5 loss 1.2266 | k0_nn_fix_fw.npz 命中 0.5607 | k0_nn.npz 命中 0.7028 | k0_nn_r2.npz 命中 0.6978 | k0_nn_fw.npz 命中 0.6585 
+epoch  6 loss 1.2194 | k0_nn_fix_fw.npz 命中 0.5634 | k0_nn.npz 命中 0.6984 | k0_nn_r2.npz 命中 0.6992 | k0_nn_fw.npz 命中 0.6585 
+epoch  7 loss 1.2138 | k0_nn_fix_fw.npz 命中 0.5612 | k0_nn.npz 命中 0.7019 | k0_nn_r2.npz 命中 0.7017 | k0_nn_fw.npz 命中 0.6566 
+epoch  8 loss 1.2095 | k0_nn_fix_fw.npz 命中 0.5642 | k0_nn.npz 命中 0.6982 | k0_nn_r2.npz 命中 0.7002 | k0_nn_fw.npz 命中 0.6509 
+epoch  9 loss 1.2064 | k0_nn_fix_fw.npz 命中 0.5623 | k0_nn.npz 命中 0.6994 | k0_nn_r2.npz 命中 0.7002 | k0_nn_fw.npz 命中 0.6552 
+epoch 10 loss 1.2043 | k0_nn_fix_fw.npz 命中 0.5634 | k0_nn.npz 命中 0.7009 | k0_nn_r2.npz 命中 0.6978 | k0_nn_fw.npz 命中 0.6557 
+epoch 11 loss 1.2031 | k0_nn_fix_fw.npz 命中 0.5631 | k0_nn.npz 命中 0.6996 | k0_nn_r2.npz 命中 0.6995 | k0_nn_fw.npz 命中 0.6524 
+epoch 12 loss 1.2025 | k0_nn_fix_fw.npz 命中 0.5629 | k0_nn.npz 命中 0.6992 | k0_nn_r2.npz 命中 0.6992 | k0_nn_fw.npz 命中 0.6547 
+固定训练预算终点: models/retrain_fix_20260905/fw_mix_s72_last.pt
+已保存 models/retrain_fix_20260905/fw_mix_s72.pt  (自身分布命中 0.5642)

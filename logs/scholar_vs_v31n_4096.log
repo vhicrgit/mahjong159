@@ -1,0 +1,4 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+候选: 牌型分析器 kai=0 (自己的 E 碰杠)
+基线: v31n   4096 seed × 4 座位 (CRN 配对, 真实净分差口径)

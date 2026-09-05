@@ -1,0 +1,5 @@
+/opt/conda/envs/python3.10/lib/python3.10/site-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+nn 自对弈 8000 局 -> 73988 个状态  599s
+标签 kai=0 × 8 进程  461s
+已存 models/k0_nn_fix_fw.npz  73988 条  E: 均 9.81 标准差 4.06
