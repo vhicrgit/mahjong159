@@ -62,6 +62,7 @@ KIND_INFO = {
     "scholar":    ("学者", "牌型价值分析器: 每手算期望胡牌巡数"),
     "search159":  ("搜索实验", "可见历史搜索: 完整碰杠与净分评估，运行较慢"),
     "finite159":  ("有限期实验", "无放回动态规划: 优化短期后续打法"),
+    "acnn":       ("AC学者", "神经网络: 分析器E值预训练 + actor-critic 强化"),
     "target":     ("目标", "目标路线概率 Bot"),
     "cheat_wall": ("挂哥", "作弊: 可见牌墙"),
     "cheat_opp":  ("挂王", "作弊: 牌墙+对手手牌"),
@@ -101,6 +102,18 @@ def make_bot(kind: str | None, game, seat: int, param: int = 0):
         from .bot_search159 import Bot as B
         return B(game, seat, mode="finite", finite_horizon=param or 3,
                  finite_discount=0.7)
+    if kind == "acnn":
+        import os
+        from ..rl.net_bot import NetBot
+        path = os.environ.get("ACNN_MODEL",
+                              "models/acnn_latest_best.pt")
+        if not os.path.exists(path):
+            path = "models/acnn_latest.pt"
+        if not os.path.exists(path):
+            # 模型文件不入库(~5MB); 没训练产物时退回老鸟, 别让游戏崩
+            from .bot_v31 import Bot as B
+            return B(game, seat)
+        return NetBot(game, seat, path)
     if kind == "target":
         from .bot_target import Bot as B
         return B(game, seat)

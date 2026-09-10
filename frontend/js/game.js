@@ -568,6 +568,7 @@ const BOT_KINDS = [
   ["scholar", "学者(牌型价值)"],
   ["search159", "搜索(实验，较慢)"],
   ["finite159", "有限期(实验)"],
+  ["acnn", "AC学者(神经网络)"],
   ["target", "目标概率"],
   ["cheat_wall", "挂哥(看牌墙)"],
   ["cheat_opp", "挂王(看牌+手牌)"],
