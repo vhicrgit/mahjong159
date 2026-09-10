@@ -19,7 +19,7 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
-_SO = os.path.join(_HERE, "libmj159.so")
+_SO = os.path.join(_ROOT, "build", "native", "libmj159.so")
 _SRC = os.path.join(_HERE, "mj159.c")
 
 _LIB = None
@@ -28,6 +28,7 @@ _LIB = None
 def _compile():
     """编译到临程文件再原子改名 —— spawn 起的多个 worker 会同时首次导入本模块,
     直接写 libmj159.so 会让别的 worker dlopen 到写了一半的文件。"""
+    os.makedirs(os.path.dirname(_SO), exist_ok=True)
     tmp = f"{_SO}.{os.getpid()}.tmp"
     cmd = ["cc", "-O3", "-fPIC", "-shared", "-o", tmp, _SRC]
     if os.environ.get("MJ_NATIVE_MARCH", "1") == "1":
@@ -43,7 +44,8 @@ def _compile():
 def _need_build() -> bool:
     if not os.path.exists(_SO):
         return True
-    return os.path.getmtime(_SO) < os.path.getmtime(_SRC)
+    dependencies = (_SRC, os.path.join(_ROOT, "mobile", "wasm", "hv_engine_inc.c"))
+    return any(os.path.getmtime(_SO) < os.path.getmtime(p) for p in dependencies)
 
 
 def lib():

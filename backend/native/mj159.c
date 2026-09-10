@@ -30,6 +30,8 @@ static const uint8_t *W_TBL = NULL; /* [code][ru][2]  */
 #define SH_SIZE (1u << SH_BITS)
 #define TI_BITS 21
 #define TI_SIZE (1u << TI_BITS)
+#define SECOND_BITS 17
+#define SECOND_SIZE (1u << SECOND_BITS)
 
 typedef struct {
     uint64_t key;
@@ -46,9 +48,24 @@ typedef struct {
     uint8_t used;
 } EntTI;
 
+/* The continuation value depends on both counts arrays, including all red and
+ * unseen counts. Keep the full key: a hash collision may only evict an entry,
+ * never return another world's value. 80 bytes/entry = 10 MiB on 64-bit hosts. */
+typedef struct {
+    uint64_t hash;
+    double val;
+    int8_t hand[28];
+    int8_t unseen[28];
+    uint8_t used;
+} EntSecond;
+
 static Ent *sh_memo = NULL;
 static Ent *win_memo = NULL;
 static EntTI *ti_memo = NULL;
+static EntSecond *second_memo = NULL;
+static int second_enabled = 1;
+static uint64_t second_calls = 0, second_hits = 0;
+static uint64_t second_misses = 0, second_collisions = 0;
 
 static inline uint64_t mix64(uint64_t x) {
     x ^= x >> 33;
@@ -77,7 +94,31 @@ int mj_init(const char *front_path, const char *win_path) {
     win_memo = (Ent *)calloc(SH_SIZE, sizeof(Ent));
     ti_memo = (EntTI *)calloc(TI_SIZE, sizeof(EntTI));
     if (!sh_memo || !win_memo || !ti_memo) return -3;
+    /* This cache is optional; allocation failure retains uncached behavior. */
+    second_memo = (EntSecond *)calloc(SECOND_SIZE, sizeof(EntSecond));
     return 0;
+}
+
+void mj_second_step_cache_set_enabled(int enabled) {
+    second_enabled = enabled != 0;
+}
+
+void mj_second_step_cache_clear(void) {
+    if (second_memo) memset(second_memo, 0, SECOND_SIZE * sizeof(EntSecond));
+    second_calls = second_hits = second_misses = second_collisions = 0;
+}
+
+/* calls/hits/misses/collisions/allocated entries/allocated bytes. Calls and
+ * misses include disabled or unavailable-cache computations. Clearing resets
+ * counters and entries without changing the enabled flag. Like the existing
+ * native memo tables, these process-local tables require serialized access. */
+void mj_second_step_cache_stats(uint64_t *out) {
+    out[0] = second_calls;
+    out[1] = second_hits;
+    out[2] = second_misses;
+    out[3] = second_collisions;
+    out[4] = second_memo ? SECOND_SIZE : 0;
+    out[5] = second_memo ? SECOND_SIZE * sizeof(EntSecond) : 0;
 }
 
 /* ---------------- 编码 ---------------- */
@@ -102,7 +143,19 @@ static inline void encode(const int8_t *c, Code *o) {
  * 从而偏小。手牌最多 13+1=14 张, 副露只会更短, 所以 need>4 不可达。 */
 static int shanten_core(int c0, int c1, int c2, int red, int total) {
     int need = (total - 1) / 3;
-    if (need < 1) need = 1;
+    /* Four exposed melds leave only the pair to complete.  This primitive is
+     * also used inside discard/call search, which bypasses Python wrappers. */
+    if (need <= 0) {
+        if (total <= 1) return 0;
+        if (red >= 1) return -1;
+        int codes[3] = {c0, c1, c2};
+        for (int j = 0; j < 3; j++) {
+            int v = codes[j];
+            for (int i = 0; i < 9; i++, v /= 5)
+                if (v % 5 >= 2) return -1;
+        }
+        return 1;
+    }
     if (need > 4) need = 4;
 
     int8_t G01[5][10], G012[5][10];
@@ -293,7 +346,7 @@ static inline int ukeire(const int8_t *c, const int8_t *unseen) {
 }
 
 /* ---------------- 两步推演(v10 _second_step_value / v31 _second_step_m) ---------------- */
-static double second_step(const int8_t *c13, const int8_t *unseen) {
+static double second_step_uncached(const int8_t *c13, const int8_t *unseen) {
     int total = 0;
     for (int i = 0; i < 28; i++) total += unseen[i];
     if (total <= 0) return 0.0;
@@ -328,6 +381,44 @@ static double second_step(const int8_t *c13, const int8_t *unseen) {
         h14[draw]--;
     }
     return v;
+}
+
+static uint64_t second_key_hash(const int8_t *hand, const int8_t *unseen) {
+    uint64_t h = 14695981039346656037ULL;
+    for (int i = 0; i < 28; i++) {
+        h = (h ^ (uint8_t)hand[i]) * 1099511628211ULL;
+        h = (h ^ (uint8_t)unseen[i]) * 1099511628211ULL;
+    }
+    return mix64(h);
+}
+
+static double second_step(const int8_t *c13, const int8_t *unseen) {
+    second_calls++;
+    if (!second_enabled || !second_memo) {
+        second_misses++;
+        return second_step_uncached(c13, unseen);
+    }
+    uint64_t hash = second_key_hash(c13, unseen);
+    EntSecond *e = second_memo + (hash & (SECOND_SIZE - 1));
+    if (e->used && e->hash == hash &&
+        memcmp(e->hand, c13, 28) == 0 && memcmp(e->unseen, unseen, 28) == 0) {
+        second_hits++;
+        return e->val;
+    }
+    if (e->used) second_collisions++;
+    second_misses++;
+    double val = second_step_uncached(c13, unseen);
+    e->hash = hash;
+    e->val = val;
+    memcpy(e->hand, c13, 28);
+    memcpy(e->unseen, unseen, 28);
+    e->used = 1;
+    return val;
+}
+
+/* Diagnostic value entry point shares exactly the scorer's implementation. */
+double mj_second_step_value(const int8_t *c13, const int8_t *unseen) {
+    return second_step(c13, unseen);
 }
 
 static inline double risk_of(int remain) {

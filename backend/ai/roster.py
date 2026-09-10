@@ -60,6 +60,8 @@ KIND_INFO = {
     "v10":        ("中鸟", "规则Bot v10: 广义进张+两步推演"),
     "v31":        ("老鸟", "规则Bot v31: v10+副露感知碰牌"),
     "scholar":    ("学者", "牌型价值分析器: 每手算期望胡牌巡数"),
+    "search159":  ("搜索实验", "可见历史搜索: 完整碰杠与净分评估，运行较慢"),
+    "finite159":  ("有限期实验", "无放回动态规划: 优化短期后续打法"),
     "target":     ("目标", "目标路线概率 Bot"),
     "cheat_wall": ("挂哥", "作弊: 可见牌墙"),
     "cheat_opp":  ("挂王", "作弊: 牌墙+对手手牌"),
@@ -91,6 +93,14 @@ def make_bot(kind: str | None, game, seat: int, param: int = 0):
     if kind == "scholar":
         from .bot_hv import Bot as B
         return B(game, seat)
+    if kind == "search159":
+        from .bot_search159 import Bot as B
+        return B(game, seat, simulations=param or 16, confirmation=16,
+                 candidate_limit=3, confidence_z=1.96, max_search_shanten=1)
+    if kind == "finite159":
+        from .bot_search159 import Bot as B
+        return B(game, seat, mode="finite", finite_horizon=param or 3,
+                 finite_discount=0.7)
     if kind == "target":
         from .bot_target import Bot as B
         return B(game, seat)
